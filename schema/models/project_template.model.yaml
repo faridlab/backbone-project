@@ -1,0 +1,77 @@
+# =============================================================================
+# Domain: Project delivery
+# Entities: ProjectTemplate (+ ProjectTemplateTask)
+# Description: A reusable blueprint for a common engagement. Instantiating a template
+# creates a Project plus its task tree in one shot, so a repeatable service (e.g. a
+# standard onboarding) is not hand-built every time. KEEP lightweight — a flat ordered
+# task list with parent references by sequence. Posts NO GL.
+# =============================================================================
+
+models:
+  - name: ProjectTemplate
+    collection: project_templates
+    description: "A reusable project blueprint (project + task tree)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique template id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Org owner # logical FK to organization.Company.id"
+      template_name:
+        type: string
+        attributes: ["@required", "@max(200)"]
+        description: "Template name"
+      project_type:
+        type: ProjectType
+        attributes: ["@required", "@default(external)"]
+        description: "Default project type for instances"
+      is_active:
+        type: boolean
+        attributes: ["@default(true)"]
+        description: "Whether this template can be instantiated"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [company_id, is_active]
+
+  - name: ProjectTemplateTask
+    collection: project_template_tasks
+    description: "A task in a project template (materialized into a Task on instantiation)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique template-task id"
+      template_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(ProjectTemplate.id)"]
+        description: "Parent template"
+      subject:
+        type: string
+        attributes: ["@required", "@max(200)"]
+        description: "Task subject"
+      task_type:
+        type: string?
+        attributes: ["@max(80)"]
+        description: "Free-text kind of task"
+      expected_time:
+        type: decimal
+        attributes: ["@default(0)", "@precision(10,2)", "@non_negative"]
+        description: "Estimated effort in hours"
+      sequence:
+        type: integer
+        attributes: ["@default(0)"]
+        description: "Ordering within the template"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [template_id]

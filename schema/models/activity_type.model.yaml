@@ -1,0 +1,45 @@
+# =============================================================================
+# Domain: Project delivery
+# Entity: ActivityType
+# Description: A billable/costable kind of work (e.g. Consulting, Development) with
+# default billing + costing rates. A timesheet line references an activity type and
+# snapshots its rates at log time (a later rate change never rewrites logged history).
+# Posts NO GL.
+# =============================================================================
+
+models:
+  - name: ActivityType
+    collection: activity_types
+    description: "A kind of work with default billing + costing rates"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique activity type id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Org owner # logical FK to organization.Company.id"
+      name:
+        type: string
+        attributes: ["@required", "@max(140)"]
+        description: "Activity name (Consulting, Development, Support, …)"
+      billing_rate:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Default rate charged to the customer per hour"
+      costing_rate:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Default internal cost per hour"
+      is_active:
+        type: boolean
+        attributes: ["@default(true)"]
+        description: "Whether this activity type can be logged against"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [company_id, is_active]

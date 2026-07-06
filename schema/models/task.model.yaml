@@ -1,0 +1,73 @@
+# =============================================================================
+# Domain: Project delivery
+# Entity: Task
+# Description: A unit of work inside a Project, arranged as a lightweight adjacency-list
+# tree (`parent_task_id`) — NOT a Frappe nested-set, and NOT a full WBS/critical-path
+# (KEEP lightweight, per the pillar brief §4). A task has a status and an optional
+# effort estimate. Posts NO GL.
+# =============================================================================
+
+models:
+  - name: Task
+    collection: tasks
+    description: "A unit of work in a project (adjacency-list tree)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique task id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Org owner # logical FK to organization.Company.id"
+      project_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Project.id)"]
+        description: "Owning project"
+      parent_task_id:
+        type: uuid?
+        attributes: ["@foreign_key(Task.id)"]
+        description: "Parent task (adjacency-list tree); NULL for a top-level task"
+      subject:
+        type: string
+        attributes: ["@required", "@max(200)"]
+        description: "Task subject / title"
+      task_type:
+        type: string?
+        attributes: ["@max(80)"]
+        description: "Free-text kind of task (KEEP lightweight — no TaskType master)"
+      status:
+        type: TaskStatus
+        attributes: ["@required", "@default(open)"]
+        description: "open → working → completed / cancelled"
+      expected_time:
+        type: decimal
+        attributes: ["@default(0)", "@precision(10,2)", "@non_negative"]
+        description: "Estimated effort in hours"
+      progress:
+        type: decimal
+        attributes: ["@default(0)", "@precision(5,2)", "@non_negative"]
+        description: "Percent complete, 0..100"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [project_id, status]
+      - type: index
+        fields: [parent_task_id]
+
+enums:
+  - name: TaskStatus
+    description: "Task lifecycle state"
+    variants:
+      - name: open
+        description: "Not started"
+        default: true
+      - name: working
+        description: "In progress"
+      - name: completed
+        description: "Done"
+      - name: cancelled
+        description: "Cancelled"

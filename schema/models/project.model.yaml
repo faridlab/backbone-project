@@ -1,0 +1,102 @@
+# =============================================================================
+# Domain: Project delivery
+# Entity: Project
+# Description: A unit of delivered work for a customer. It READS its customer from
+# backbone-party (logical FK) and, optionally, its originating Sales Order from
+# backbone-selling. It owns Tasks + Timesheets. Cost/billing roll-up fields
+# (total_costing_amount / total_billable_amount / total_billed_amount) give margin
+# visibility WITHOUT posting to the GL — money only moves when a billable timesheet
+# is handed to backbone-billing (the one outbound seam). Posts NO GL itself.
+# =============================================================================
+
+models:
+  - name: Project
+    collection: projects
+    description: "A customer delivery engagement with cost/billing roll-up (posts no GL)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique project id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Org owner # logical FK to organization.Company.id"
+      project_name:
+        type: string
+        attributes: ["@required", "@max(200)"]
+        description: "Project name"
+      project_type:
+        type: ProjectType
+        attributes: ["@required", "@default(external)"]
+        description: "external (billable to a customer) or internal"
+      customer_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "The customer this project delivers for # logical FK to party.Party.id"
+      source_so_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Originating Sales Order (if sold) # logical FK to selling.SalesOrder.id"
+      currency:
+        type: string
+        attributes: ["@default('IDR')", "@length(3)"]
+        description: "Currency code"
+      status:
+        type: ProjectStatus
+        attributes: ["@required", "@default(open)"]
+        description: "open → completed / cancelled"
+      expected_start_date:
+        type: datetime?
+        description: "Planned start"
+      expected_end_date:
+        type: datetime?
+        description: "Planned finish"
+      total_costing_amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Σ logged costing_amount (internal cost roll-up)"
+      total_billable_amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Σ logged billable_amount not yet billed + billed (what could be charged)"
+      total_billed_amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Σ billable_amount actually handed to billing (invoiced)"
+      notes:
+        type: string?
+        attributes: ["@max(2000)"]
+        description: "Free-text notes"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [company_id, status]
+      - type: index
+        fields: [customer_id]
+      - type: index
+        fields: [source_so_id]
+
+enums:
+  - name: ProjectType
+    description: "Whether the project is billable to an external customer"
+    variants:
+      - name: external
+        description: "Delivered for a customer — billable"
+        default: true
+      - name: internal
+        description: "Internal work — not billed out"
+
+  - name: ProjectStatus
+    description: "Project lifecycle state"
+    variants:
+      - name: open
+        description: "In delivery"
+        default: true
+      - name: completed
+        description: "Delivered / closed"
+      - name: cancelled
+        description: "Cancelled"
