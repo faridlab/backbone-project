@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS project.tasks (
     subject TEXT NOT NULL,
     task_type TEXT,
     status task_status NOT NULL DEFAULT 'open',
-    expected_time NUMERIC NOT NULL DEFAULT 0,
-    progress NUMERIC NOT NULL DEFAULT 0,
+    expected_time NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (expected_time >= 0),
+    progress NUMERIC(5, 2) NOT NULL DEFAULT 0 CHECK (progress >= 0),
     metadata JSONB NOT NULL DEFAULT '{"created_at":null,"updated_at":null,"deleted_at":null,"created_by":null,"updated_by":null,"deleted_by":null}'::jsonb,
     PRIMARY KEY (id)
 );

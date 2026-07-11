@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS project.activity_types (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
     name TEXT NOT NULL,
-    billing_rate NUMERIC NOT NULL DEFAULT 0,
-    costing_rate NUMERIC NOT NULL DEFAULT 0,
+    billing_rate NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (billing_rate >= 0),
+    costing_rate NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (costing_rate >= 0),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     metadata JSONB NOT NULL DEFAULT '{"created_at":null,"updated_at":null,"deleted_at":null,"created_by":null,"updated_by":null,"deleted_by":null}'::jsonb,
     PRIMARY KEY (id)

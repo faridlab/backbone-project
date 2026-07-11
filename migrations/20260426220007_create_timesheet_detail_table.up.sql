@@ -9,12 +9,12 @@ CREATE TABLE IF NOT EXISTS project.timesheet_details (
     activity_type_id UUID,
     task_id UUID,
     description TEXT,
-    hours NUMERIC NOT NULL,
-    billing_rate NUMERIC NOT NULL DEFAULT 0,
-    costing_rate NUMERIC NOT NULL DEFAULT 0,
+    hours NUMERIC(10, 2) NOT NULL,
+    billing_rate NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (billing_rate >= 0),
+    costing_rate NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (costing_rate >= 0),
     is_billable BOOLEAN NOT NULL DEFAULT TRUE,
-    billable_amount NUMERIC NOT NULL DEFAULT 0,
-    costing_amount NUMERIC NOT NULL DEFAULT 0,
+    billable_amount NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (billable_amount >= 0),
+    costing_amount NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (costing_amount >= 0),
     metadata JSONB NOT NULL DEFAULT '{"created_at":null,"updated_at":null,"deleted_at":null,"created_by":null,"updated_by":null,"deleted_by":null}'::jsonb,
     PRIMARY KEY (id)
 );

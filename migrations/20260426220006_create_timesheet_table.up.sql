@@ -19,9 +19,9 @@ CREATE TABLE IF NOT EXISTS project.timesheets (
     employee_id UUID,
     currency TEXT NOT NULL DEFAULT 'IDR',
     status timesheet_status NOT NULL DEFAULT 'draft',
-    total_hours NUMERIC NOT NULL DEFAULT 0,
-    total_billable_amount NUMERIC NOT NULL DEFAULT 0,
-    total_costing_amount NUMERIC NOT NULL DEFAULT 0,
+    total_hours NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (total_hours >= 0),
+    total_billable_amount NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (total_billable_amount >= 0),
+    total_costing_amount NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (total_costing_amount >= 0),
     invoice_id UUID,
     metadata JSONB NOT NULL DEFAULT '{"created_at":null,"updated_at":null,"deleted_at":null,"created_by":null,"updated_by":null,"deleted_by":null}'::jsonb,
     PRIMARY KEY (id)

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS project.project_template_tasks (
     template_id UUID NOT NULL,
     subject TEXT NOT NULL,
     task_type TEXT,
-    expected_time NUMERIC NOT NULL DEFAULT 0,
+    expected_time NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (expected_time >= 0),
     sequence INTEGER NOT NULL DEFAULT 0,
     metadata JSONB NOT NULL DEFAULT '{"created_at":null,"updated_at":null,"deleted_at":null,"created_by":null,"updated_by":null,"deleted_by":null}'::jsonb,
     PRIMARY KEY (id)
