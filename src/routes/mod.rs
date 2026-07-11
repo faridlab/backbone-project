@@ -12,12 +12,19 @@ use std::sync::Arc;
 // Import handlers
 use crate::presentation::http::{
     create_activity_type_routes,
+    create_activity_type_read_routes,
     create_project_routes,
+    create_project_read_routes,
     create_project_template_routes,
+    create_project_template_read_routes,
     create_project_template_task_routes,
+    create_project_template_task_read_routes,
     create_task_routes,
+    create_task_read_routes,
     create_timesheet_routes,
-    create_timesheet_detail_routes
+    create_timesheet_read_routes,
+    create_timesheet_detail_routes,
+    create_timesheet_detail_read_routes
 };
 
 // Import AppState for stateful routes
@@ -48,6 +55,22 @@ pub fn create_stateless_routes(module: &crate::ProjectModule) -> Router<()> {
         .merge(create_task_routes(module.task_service.clone()))
         .merge(create_timesheet_routes(module.timesheet_service.clone()))
         .merge(create_timesheet_detail_routes(module.timesheet_detail_service.clone()))
+}
+
+/// Read-only routes for the Project module — every entity mounted READ-ONLY (the guarded base).
+///
+/// The generic `create_stateless_routes` exposes full mutable CRUD with no domain
+/// validation; this exposes only reads, so generic mutation can't bypass a write
+/// service's invariants. Extend it: `create_readonly_project_routes(m).merge(my_validated_writes)`.
+pub fn create_readonly_project_routes(module: &crate::ProjectModule) -> Router<()> {
+    Router::new()
+        .merge(create_activity_type_read_routes(module.activity_type_service.clone()))
+        .merge(create_project_read_routes(module.project_service.clone()))
+        .merge(create_project_template_read_routes(module.project_template_service.clone()))
+        .merge(create_project_template_task_read_routes(module.project_template_task_service.clone()))
+        .merge(create_task_read_routes(module.task_service.clone()))
+        .merge(create_timesheet_read_routes(module.timesheet_service.clone()))
+        .merge(create_timesheet_detail_read_routes(module.timesheet_detail_service.clone()))
 }
 
 /// Get all routes (stateless) for the Project module.
