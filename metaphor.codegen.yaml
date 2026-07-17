@@ -14,6 +14,17 @@ user_owned:
   - "src/application/service/project_events.rs"
   - "src/application/service/project_ports.rs"
   - "src/application/service/project_write_service.rs"
+  # Own the hand-written project SQL (the delivery writes, the status-gated roll-up + its reversal, the
+  # billing seam's at-most-once transition gates) that the write service orchestrates. Declared here —
+  # not renamed with a `_custom` suffix — so the generator skips them wholesale; this declaration is
+  # what makes editing them legitimate.
+  - "src/infrastructure/persistence/activity_type_repository.rs"
+  - "src/infrastructure/persistence/project_repository.rs"
+  - "src/infrastructure/persistence/project_template_repository.rs"
+  - "src/infrastructure/persistence/project_template_task_repository.rs"
+  - "src/infrastructure/persistence/task_repository.rs"
+  - "src/infrastructure/persistence/timesheet_detail_repository.rs"
+  - "src/infrastructure/persistence/timesheet_repository.rs"
   - "tests/integrity_probes.rs"
   - "tests/project_billing_seam.rs"
   - "tests/project_golden_cases.rs"
