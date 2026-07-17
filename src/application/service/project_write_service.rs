@@ -6,6 +6,7 @@
 //! the echoed `invoice_id` and marks the timesheet BILLED. The hand-off is idempotent + transition-gated
 //! (a timesheet bills once). Money is IDR, 2dp, half-away-from-zero.
 
+use backbone_orm::company_scope;
 use rust_decimal::{Decimal, RoundingStrategy};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
@@ -91,14 +92,22 @@ impl ProjectWriteService {
         }
         let id = Uuid::new_v4();
         let currency = p.currency.unwrap_or_else(|| "IDR".into());
-        sqlx::query(
-            r#"INSERT INTO project.projects
-                 (id, company_id, project_name, project_type, customer_id, source_so_id, currency, status)
-               VALUES ($1,$2,$3,$4::project_type,$5,$6,$7,'open'::project_status)"#,
+        // RLS scope (ADR-0008): company on the DTO — bind it so the INSERT satisfies the WITH CHECK
+        // fence on `app.company_id` (a non-request caller has no ambient scope otherwise).
+        let company = p.company_id;
+        company_scope::with_company_scope(
+            Some(company),
+            company_scope::execute_scoped(
+                &self.pool,
+                sqlx::query(
+                    r#"INSERT INTO project.projects
+                         (id, company_id, project_name, project_type, customer_id, source_so_id, currency, status)
+                       VALUES ($1,$2,$3,$4::project_type,$5,$6,$7,'open'::project_status)"#,
+                )
+                .bind(id).bind(p.company_id).bind(&p.project_name).bind(&p.project_type)
+                .bind(p.customer_id).bind(p.source_so_id).bind(&currency),
+            ),
         )
-        .bind(id).bind(p.company_id).bind(&p.project_name).bind(&p.project_type)
-        .bind(p.customer_id).bind(p.source_so_id).bind(&currency)
-        .execute(&self.pool)
         .await?;
         Ok(id)
     }
@@ -108,12 +117,17 @@ impl ProjectWriteService {
         if t.subject.trim().is_empty() {
             return Err(ProjectError::Invalid("task needs a subject".into()));
         }
-        let proj = sqlx::query(
-            r#"SELECT company_id, status::text AS status FROM project.projects
-               WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+        // RLS scope (ADR-0008), ID-only pattern: identified by the project id alone, so the lookups ride
+        // the request-dedicated connection (which carries the caller's `app.company_id`) — another
+        // company's project is simply not found. The INSERT then binds the company read off the row.
+        let proj = company_scope::fetch_optional_row_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"SELECT company_id, status::text AS status FROM project.projects
+                   WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(t.project_id),
         )
-        .bind(t.project_id)
-        .fetch_optional(&self.pool)
         .await?
         .ok_or(ProjectError::NotFound("project"))?;
         let status: String = proj.get("status");
@@ -122,22 +136,30 @@ impl ProjectWriteService {
         }
         let company_id: Uuid = proj.get("company_id");
         if let Some(parent) = t.parent_task_id {
-            let ok: Option<Uuid> = sqlx::query_scalar(
-                "SELECT id FROM project.tasks WHERE id=$1 AND project_id=$2")
-                .bind(parent).bind(t.project_id).fetch_optional(&self.pool).await?;
+            let ok: Option<Uuid> = company_scope::fetch_optional_scalar_scoped(
+                &self.pool,
+                sqlx::query_scalar("SELECT id FROM project.tasks WHERE id=$1 AND project_id=$2")
+                    .bind(parent).bind(t.project_id),
+            )
+            .await?;
             if ok.is_none() {
                 return Err(ProjectError::Invalid("parent task is not in this project".into()));
             }
         }
         let id = Uuid::new_v4();
-        sqlx::query(
-            r#"INSERT INTO project.tasks
-                 (id, company_id, project_id, parent_task_id, subject, task_type, status, expected_time, progress)
-               VALUES ($1,$2,$3,$4,$5,$6,'open'::task_status,$7,0)"#,
+        company_scope::with_company_scope(
+            Some(company_id),
+            company_scope::execute_scoped(
+                &self.pool,
+                sqlx::query(
+                    r#"INSERT INTO project.tasks
+                         (id, company_id, project_id, parent_task_id, subject, task_type, status, expected_time, progress)
+                       VALUES ($1,$2,$3,$4,$5,$6,'open'::task_status,$7,0)"#,
+                )
+                .bind(id).bind(company_id).bind(t.project_id).bind(t.parent_task_id).bind(&t.subject)
+                .bind(&t.task_type).bind(t.expected_time),
+            ),
         )
-        .bind(id).bind(company_id).bind(t.project_id).bind(t.parent_task_id).bind(&t.subject)
-        .bind(&t.task_type).bind(t.expected_time)
-        .execute(&self.pool)
         .await?;
         Ok(id)
     }
@@ -152,14 +174,19 @@ impl ProjectWriteService {
         if progress < Decimal::ZERO || progress > Decimal::from(100) {
             return Err(ProjectError::Invalid("progress must be 0..100".into()));
         }
-        let moved = sqlx::query(
-            r#"UPDATE project.tasks SET status=$2::task_status, progress=$3
-               WHERE id=$1 AND status IN ('open','working') AND (metadata->>'deleted_at') IS NULL"#,
+        // RLS scope (ADR-0008), ID-only pattern: no company argument — the UPDATE runs on the
+        // request-dedicated connection, so RLS fences it to the caller's tenant (0 rows otherwise,
+        // which the guard below already reports as not-advanceable).
+        let moved = company_scope::execute_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"UPDATE project.tasks SET status=$2::task_status, progress=$3
+                   WHERE id=$1 AND status IN ('open','working') AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(task_id)
+            .bind(status)
+            .bind(progress),
         )
-        .bind(task_id)
-        .bind(status)
-        .bind(progress)
-        .execute(&self.pool)
         .await?;
         if moved.rows_affected() != 1 {
             return Err(ProjectError::InvalidState("task is not advanceable (open/working only)"));
@@ -176,12 +203,18 @@ impl ProjectWriteService {
         project_name: String,
         customer_id: Option<Uuid>,
     ) -> Result<Uuid, ProjectError> {
-        let tpl = sqlx::query(
-            r#"SELECT project_type::text AS project_type, is_active FROM project.project_templates
-               WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+        // RLS scope (ADR-0008): company is on the parameter — bind it for the whole instantiation, so
+        // the template reads and every nested create/add write are fenced (the nested calls re-bind the
+        // same company, which is a no-op).
+        company_scope::with_company_scope(Some(company_id), async move {
+        let tpl = company_scope::fetch_optional_row_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"SELECT project_type::text AS project_type, is_active FROM project.project_templates
+                   WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(template_id),
         )
-        .bind(template_id)
-        .fetch_optional(&self.pool)
         .await?
         .ok_or(ProjectError::NotFound("template"))?;
         if !tpl.get::<bool, _>("is_active") {
@@ -198,12 +231,14 @@ impl ProjectWriteService {
                 currency: None,
             })
             .await?;
-        let tasks = sqlx::query(
-            r#"SELECT subject, task_type, expected_time FROM project.project_template_tasks
-               WHERE template_id=$1 AND (metadata->>'deleted_at') IS NULL ORDER BY sequence ASC"#,
+        let tasks = company_scope::fetch_all_rows_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"SELECT subject, task_type, expected_time FROM project.project_template_tasks
+                   WHERE template_id=$1 AND (metadata->>'deleted_at') IS NULL ORDER BY sequence ASC"#,
+            )
+            .bind(template_id),
         )
-        .bind(template_id)
-        .fetch_all(&self.pool)
         .await?;
         for row in &tasks {
             self.add_task(NewTask {
@@ -216,6 +251,8 @@ impl ProjectWriteService {
             .await?;
         }
         Ok(project_id)
+        })
+        .await
     }
 
     /// Log effort against a project as a SUBMITTED timesheet. Each line snapshots its billing/costing
@@ -231,12 +268,16 @@ impl ProjectWriteService {
         if ts.lines.is_empty() {
             return Err(ProjectError::Invalid("a timesheet needs at least one line".into()));
         }
-        let proj = sqlx::query(
-            r#"SELECT company_id, currency, status::text AS status FROM project.projects
-               WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+        // RLS scope (ADR-0008), ID-only pattern: identified by the project id alone — the read rides the
+        // request-dedicated connection, and the company it returns is bound onto the tx below.
+        let proj = company_scope::fetch_optional_row_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"SELECT company_id, currency, status::text AS status FROM project.projects
+                   WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(project_id),
         )
-        .bind(project_id)
-        .fetch_optional(&self.pool)
         .await?
         .ok_or(ProjectError::NotFound("project"))?;
         let status: String = proj.get("status");
@@ -269,9 +310,12 @@ impl ProjectWriteService {
                 (l.billing_rate.unwrap_or(Decimal::ZERO), l.costing_rate.unwrap_or(Decimal::ZERO));
             if l.billing_rate.is_none() || l.costing_rate.is_none() {
                 if let Some(at) = l.activity_type_id {
-                    let rates = sqlx::query(
-                        "SELECT billing_rate, costing_rate FROM project.activity_types WHERE id=$1")
-                        .bind(at).fetch_optional(&self.pool).await?;
+                    let rates = company_scope::fetch_optional_row_scoped(
+                        &self.pool,
+                        sqlx::query("SELECT billing_rate, costing_rate FROM project.activity_types WHERE id=$1")
+                            .bind(at),
+                    )
+                    .await?;
                     if let Some(r) = rates {
                         if l.billing_rate.is_none() { billing_rate = r.get("billing_rate"); }
                         if l.costing_rate.is_none() { costing_rate = r.get("costing_rate"); }
@@ -292,6 +336,9 @@ impl ProjectWriteService {
 
         let ts_id = Uuid::new_v4();
         let mut tx = self.pool.begin().await?;
+        // RLS scope (ADR-0008): bind the company read off the project row onto this tx, so the timesheet
+        // insert + roll-up satisfy the fence on every statement in it.
+        company_scope::bind_company_on(&mut tx, company_id).await?;
         sqlx::query(
             r#"INSERT INTO project.timesheets
                  (id, company_id, project_id, employee_id, currency, status, total_hours,
@@ -354,12 +401,16 @@ impl ProjectWriteService {
         timesheet_id: Uuid,
         sink: &dyn ProjectEventSink,
     ) -> Result<(), ProjectError> {
-        let ts = sqlx::query(
-            r#"SELECT company_id, project_id, status::text AS status, total_billable_amount, total_costing_amount
-               FROM project.timesheets WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+        // RLS scope (ADR-0008), ID-only pattern: the read rides the request-dedicated connection; the
+        // company it returns is bound onto the reversal tx below.
+        let ts = company_scope::fetch_optional_row_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"SELECT company_id, project_id, status::text AS status, total_billable_amount, total_costing_amount
+                   FROM project.timesheets WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(timesheet_id),
         )
-        .bind(timesheet_id)
-        .fetch_optional(&self.pool)
         .await?
         .ok_or(ProjectError::NotFound("timesheet"))?;
         let status: String = ts.get("status");
@@ -378,6 +429,8 @@ impl ProjectWriteService {
         let costing: Decimal = ts.get("total_costing_amount");
 
         let mut tx = self.pool.begin().await?;
+        // RLS scope (ADR-0008): bind the company read off the timesheet row onto this tx.
+        company_scope::bind_company_on(&mut tx, company_id).await?;
         // Gate: claim the cancellation exactly once (submitted → cancelled).
         let moved = sqlx::query(
             r#"UPDATE project.timesheets SET status='cancelled'::timesheet_status
@@ -421,12 +474,17 @@ impl ProjectWriteService {
         billing: &dyn BillingPort,
         sink: &dyn ProjectEventSink,
     ) -> Result<BillOutcome, ProjectError> {
-        let ts = sqlx::query(
-            r#"SELECT company_id, project_id, currency, status::text AS status, total_billable_amount, invoice_id
-               FROM project.timesheets WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+        // RLS scope (ADR-0008), ID-only pattern: identified by the timesheet id alone. Under HTTP the
+        // request-dedicated connection carries the scope. When driven by an EVENT/job, the caller must
+        // wrap this in `with_company_scope(Some(company_id))` — otherwise these reads fail closed.
+        let ts = company_scope::fetch_optional_row_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"SELECT company_id, project_id, currency, status::text AS status, total_billable_amount, invoice_id
+                   FROM project.timesheets WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(timesheet_id),
         )
-        .bind(timesheet_id)
-        .fetch_optional(&self.pool)
         .await?
         .ok_or(ProjectError::NotFound("timesheet"))?;
         let status: String = ts.get("status");
@@ -446,21 +504,25 @@ impl ProjectWriteService {
         let project_id: Uuid = ts.get("project_id");
         let currency: String = ts.get("currency");
 
-        let customer_id: Uuid = sqlx::query_scalar::<_, Option<Uuid>>(
-            "SELECT customer_id FROM project.projects WHERE id=$1")
-            .bind(project_id)
-            .fetch_one(&self.pool)
-            .await?
-            .ok_or(ProjectError::Invalid("project has no customer to bill".into()))?;
-
-        let lines: Vec<InvoiceLineFromTimesheet> = sqlx::query(
-            r#"SELECT activity_type_id, description, hours, billing_rate
-               FROM project.timesheet_details WHERE timesheet_id=$1 AND is_billable=true"#,
+        let customer_id: Uuid = company_scope::fetch_one_scalar_scoped(
+            &self.pool,
+            sqlx::query_scalar::<_, Option<Uuid>>("SELECT customer_id FROM project.projects WHERE id=$1")
+                .bind(project_id),
         )
-        .bind(timesheet_id)
-        .fetch_all(&self.pool)
         .await?
-        .iter()
+        .ok_or(ProjectError::Invalid("project has no customer to bill".into()))?;
+
+        let line_rows = company_scope::fetch_all_rows_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"SELECT activity_type_id, description, hours, billing_rate
+                   FROM project.timesheet_details WHERE timesheet_id=$1 AND is_billable=true"#,
+            )
+            .bind(timesheet_id),
+        )
+        .await?;
+        let lines: Vec<InvoiceLineFromTimesheet> = line_rows
+            .iter()
         .map(|r| InvoiceLineFromTimesheet {
             item_id: r.get::<Option<Uuid>, _>("activity_type_id").unwrap_or_else(Uuid::nil),
             description: r.get("description"),
@@ -482,6 +544,9 @@ impl ProjectWriteService {
 
         // Gate: claim the billing exactly once, AND roll the project's billed total up in the same tx.
         let mut tx = self.pool.begin().await?;
+        // RLS scope (ADR-0008): bind the company read off the timesheet row onto this tx, so the
+        // billed-flip + the project roll-up both pass the fence.
+        company_scope::bind_company_on(&mut tx, company_id).await?;
         let moved = sqlx::query(
             r#"UPDATE project.timesheets SET status='billed'::timesheet_status, invoice_id=$2
                WHERE id=$1 AND status='submitted'::timesheet_status"#,
@@ -492,9 +557,12 @@ impl ProjectWriteService {
         .await?;
         if moved.rows_affected() != 1 {
             tx.rollback().await?;
-            let inv: Uuid = sqlx::query_scalar(
-                "SELECT invoice_id FROM project.timesheets WHERE id=$1")
-                .bind(timesheet_id).fetch_one(&self.pool).await?;
+            let inv: Uuid = company_scope::fetch_one_scalar_scoped(
+                &self.pool,
+                sqlx::query_scalar("SELECT invoice_id FROM project.timesheets WHERE id=$1")
+                    .bind(timesheet_id),
+            )
+            .await?;
             return Ok(BillOutcome { invoice_id: inv, amount, already: true });
         }
         sqlx::query(
@@ -516,13 +584,18 @@ impl ProjectWriteService {
         project_id: Uuid,
         sink: &dyn ProjectEventSink,
     ) -> Result<(), ProjectError> {
-        let row = sqlx::query(
-            r#"UPDATE project.projects SET status='completed'::project_status
-               WHERE id=$1 AND status='open'::project_status AND (metadata->>'deleted_at') IS NULL
-               RETURNING company_id, total_billable_amount, total_costing_amount"#,
+        // RLS scope (ADR-0008), ID-only pattern: no company argument — this UPDATE…RETURNING rides the
+        // request-dedicated connection, so RLS fences it to the caller's tenant (another company's
+        // project matches 0 rows, reported below as not-open).
+        let row = company_scope::fetch_optional_row_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"UPDATE project.projects SET status='completed'::project_status
+                   WHERE id=$1 AND status='open'::project_status AND (metadata->>'deleted_at') IS NULL
+                   RETURNING company_id, total_billable_amount, total_costing_amount"#,
+            )
+            .bind(project_id),
         )
-        .bind(project_id)
-        .fetch_optional(&self.pool)
         .await?;
         match row {
             Some(r) => {
