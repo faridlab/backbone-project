@@ -48,6 +48,10 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique template-task id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Org owner (denormalized from ProjectTemplate) # logical FK to organization.Company.id"
       template_id:
         type: uuid
         attributes: ["@required", "@foreign_key(ProjectTemplate.id)"]
@@ -75,3 +79,5 @@ models:
     indexes:
       - type: index
         fields: [template_id]
+      - type: index
+        fields: [company_id]

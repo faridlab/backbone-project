@@ -319,6 +319,7 @@ impl ProjectWriteService {
         for l in &lines {
             self.timesheet_details.insert_detail(&mut tx, &NewTimesheetDetailRow {
                 id: Uuid::new_v4(),
+                company_id,
                 timesheet_id: ts_id,
                 activity_type_id: l.activity_type_id,
                 task_id: l.task_id,

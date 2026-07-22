@@ -3057,6 +3057,7 @@ components:
       type: object
       required:
         - id
+        - company_id
         - template_id
         - subject
         - expected_time
@@ -3064,6 +3065,9 @@ components:
         - metadata
       properties:
         id:
+          type: string
+          format: uuid
+        company_id:
           type: string
           format: uuid
         template_id:
@@ -3100,12 +3104,16 @@ components:
     CreateProjectTemplateTaskRequest:
       type: object
       required:
+        - company_id
         - template_id
         - subject
         - expected_time
         - sequence
         - metadata
       properties:
+        company_id:
+          type: string
+          format: uuid
         template_id:
           type: string
           format: uuid
@@ -3127,12 +3135,16 @@ components:
     UpdateProjectTemplateTaskRequest:
       type: object
       required:
+        - company_id
         - template_id
         - subject
         - expected_time
         - sequence
         - metadata
       properties:
+        company_id:
+          type: string
+          format: uuid
         template_id:
           type: string
           format: uuid
@@ -3154,6 +3166,9 @@ components:
     PatchProjectTemplateTaskRequest:
       type: object
       properties:
+        company_id:
+          type: string
+          format: uuid
         template_id:
           type: string
           format: uuid
@@ -3527,6 +3542,7 @@ components:
       type: object
       required:
         - id
+        - company_id
         - timesheet_id
         - hours
         - billing_rate
@@ -3537,6 +3553,9 @@ components:
         - metadata
       properties:
         id:
+          type: string
+          format: uuid
+        company_id:
           type: string
           format: uuid
         timesheet_id:
@@ -3585,6 +3604,7 @@ components:
     CreateTimesheetDetailRequest:
       type: object
       required:
+        - company_id
         - timesheet_id
         - hours
         - billing_rate
@@ -3594,6 +3614,9 @@ components:
         - costing_amount
         - metadata
       properties:
+        company_id:
+          type: string
+          format: uuid
         timesheet_id:
           type: string
           format: uuid
@@ -3627,6 +3650,7 @@ components:
     UpdateTimesheetDetailRequest:
       type: object
       required:
+        - company_id
         - timesheet_id
         - hours
         - billing_rate
@@ -3636,6 +3660,9 @@ components:
         - costing_amount
         - metadata
       properties:
+        company_id:
+          type: string
+          format: uuid
         timesheet_id:
           type: string
           format: uuid
@@ -3669,6 +3696,9 @@ components:
     PatchTimesheetDetailRequest:
       type: object
       properties:
+        company_id:
+          type: string
+          format: uuid
         timesheet_id:
           type: string
           format: uuid

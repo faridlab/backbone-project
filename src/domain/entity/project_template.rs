@@ -209,6 +209,9 @@ impl backbone_orm::EntityRepoMeta for ProjectTemplate {
     fn search_fields() -> &'static [&'static str] {
         &["template_name"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for ProjectTemplate entity

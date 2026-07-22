@@ -44,6 +44,7 @@ impl TimesheetDetailRepository {
 /// default) and the amounts its already-computed, money-rounded products.
 pub struct NewTimesheetDetailRow<'a> {
     pub id: Uuid,
+    pub company_id: Uuid,
     pub timesheet_id: Uuid,
     pub activity_type_id: Option<Uuid>,
     pub task_id: Option<Uuid>,
@@ -71,6 +72,8 @@ impl TimesheetDetailRepository {
     ///
     /// Takes the CALLER'S connection so every line, the header and the project roll-up commit as ONE
     /// unit. The caller has already bound the company on it (`bind_company_on`) — don't re-bind here.
+    /// `company_id` is written onto the row to satisfy the denormalized child-table fence
+    /// (ADR-0010 Decision A): the WITH CHECK policy compares it against `app.company_id`.
     pub async fn insert_detail(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -78,12 +81,12 @@ impl TimesheetDetailRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO project.timesheet_details
-                 (id, timesheet_id, activity_type_id, task_id, description, hours, billing_rate,
-                  costing_rate, is_billable, billable_amount, costing_amount)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)"#,
+                 (id, company_id, timesheet_id, activity_type_id, task_id, description, hours,
+                  billing_rate, costing_rate, is_billable, billable_amount, costing_amount)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)"#,
         )
-        .bind(l.id).bind(l.timesheet_id).bind(l.activity_type_id).bind(l.task_id).bind(l.description)
-        .bind(l.hours).bind(l.billing_rate).bind(l.costing_rate).bind(l.is_billable)
+        .bind(l.id).bind(l.company_id).bind(l.timesheet_id).bind(l.activity_type_id).bind(l.task_id)
+        .bind(l.description).bind(l.hours).bind(l.billing_rate).bind(l.costing_rate).bind(l.is_billable)
         .bind(l.billable_amount).bind(l.costing_amount)
         .execute(conn)
         .await?;

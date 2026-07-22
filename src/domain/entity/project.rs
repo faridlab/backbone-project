@@ -298,6 +298,9 @@ impl backbone_orm::EntityRepoMeta for Project {
     fn search_fields() -> &'static [&'static str] {
         &["project_name", "currency"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for Project entity

@@ -72,6 +72,10 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Org owner (denormalized from Timesheet) # logical FK to organization.Company.id"
       timesheet_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Timesheet.id)"]
@@ -119,6 +123,8 @@ models:
     indexes:
       - type: index
         fields: [timesheet_id]
+      - type: index
+        fields: [company_id]
 
 enums:
   - name: TimesheetStatus

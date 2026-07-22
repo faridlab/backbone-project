@@ -259,6 +259,9 @@ impl backbone_orm::EntityRepoMeta for Timesheet {
     fn search_fields() -> &'static [&'static str] {
         &["currency"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for Timesheet entity

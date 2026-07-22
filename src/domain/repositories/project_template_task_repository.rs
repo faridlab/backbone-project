@@ -44,6 +44,7 @@ pub struct ProjectTemplateTaskPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct ProjectTemplateTaskFilter {
+    pub company_id: Option<Uuid>,
     pub template_id: Option<Uuid>,
     pub subject: Option<String>,
     pub task_type: Option<String>,
@@ -52,7 +53,7 @@ pub struct ProjectTemplateTaskFilter {
 impl ProjectTemplateTaskFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.template_id.is_some() || self.subject.is_some() || self.task_type.is_some()
+        self.company_id.is_some() || self.template_id.is_some() || self.subject.is_some() || self.task_type.is_some()
     }
 }
 

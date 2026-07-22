@@ -212,6 +212,9 @@ impl backbone_orm::EntityRepoMeta for ActivityType {
     fn search_fields() -> &'static [&'static str] {
         &["name"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for ActivityType entity

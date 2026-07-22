@@ -234,6 +234,7 @@ impl From<ProjectTemplateTaskId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectTemplateTaskDto {
     pub id: ProjectTemplateTaskId,
+    pub company_id: Uuid,
     pub template_id: Uuid,
     pub subject: String,
     pub task_type: Option<String>,
@@ -417,6 +418,7 @@ impl From<TimesheetDetailId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimesheetDetailDto {
     pub id: TimesheetDetailId,
+    pub company_id: Uuid,
     pub timesheet_id: Uuid,
     pub activity_type_id: Option<Uuid>,
     pub task_id: Option<Uuid>,

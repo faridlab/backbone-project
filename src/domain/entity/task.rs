@@ -253,6 +253,9 @@ impl backbone_orm::EntityRepoMeta for Task {
     fn search_fields() -> &'static [&'static str] {
         &["subject"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for Task entity

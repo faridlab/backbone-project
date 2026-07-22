@@ -24,6 +24,7 @@ impl TestDataGenerator for ProjectTemplateTaskTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
+            "company_id": Uuid::new_v4().to_string(),
             "template_id": Uuid::new_v4().to_string(),
             "subject": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "task_type": null,
@@ -37,6 +38,7 @@ impl TestDataGenerator for ProjectTemplateTaskTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
+            "company_id": Uuid::new_v4().to_string(),
             "template_id": Uuid::new_v4().to_string(),
             "subject": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "task_type": null,
