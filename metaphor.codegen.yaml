@@ -14,6 +14,12 @@ user_owned:
   - "src/application/service/project_events.rs"
   - "src/application/service/project_ports.rs"
   - "src/application/service/project_write_service.rs"
+  # The write surface, chunked out of project_write_service.rs. Each is an `impl ProjectWriteService`
+  # block; the shared vocabulary (input structs, outcome, error) stays in project_write_service.rs.
+  - "src/application/service/project_lifecycle.rs"
+  - "src/application/service/project_task.rs"
+  - "src/application/service/project_timesheet.rs"
+  - "src/application/service/project_billing.rs"
   # Own the hand-written project SQL (the delivery writes, the status-gated roll-up + its reversal, the
   # billing seam's at-most-once transition gates) that the write service orchestrates. Declared here —
   # not renamed with a `_custom` suffix — so the generator skips them wholesale; this declaration is

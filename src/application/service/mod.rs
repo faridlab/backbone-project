@@ -19,6 +19,13 @@ pub mod timesheet_detail_service;
 pub mod project_events;
 pub mod project_ports;
 pub mod project_write_service;
+// The write surface, chunked: each is an `impl ProjectWriteService` block over the vocabulary that
+// stays in `project_write_service` (so the `project_write_service::{NewProject, ...}` import paths
+// are unchanged).
+pub mod project_lifecycle;
+pub mod project_task;
+pub mod project_timesheet;
+pub mod project_billing;
 // END CUSTOM
 
 pub use activity_type_service::ActivityTypeService;
