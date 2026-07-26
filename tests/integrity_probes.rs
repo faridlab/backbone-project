@@ -47,9 +47,9 @@ async fn ip1_bill_idempotent() {
     let project = svc.create_project(ext_project(company)).await.unwrap();
     let ts = billable_ts(&svc, project, act, &sink).await;
 
-    let a = svc.bill_timesheet(ts, &billing, &sink).await.unwrap();
+    let a = svc.bill_timesheet(ts, company, &billing, &sink).await.unwrap();
     assert!(!a.already);
-    let b = svc.bill_timesheet(ts, &billing, &sink).await.unwrap();
+    let b = svc.bill_timesheet(ts, company, &billing, &sink).await.unwrap();
     assert!(b.already, "second bill short-circuits");
     assert_eq!(a.invoice_id, b.invoice_id, "same invoice");
     assert_eq!(billing.invoice_count(), 1, "billing driven exactly once");
@@ -75,7 +75,7 @@ async fn ip2_nothing_billable_refused() {
             hours: dec("4"), billing_rate: None, costing_rate: None, is_billable: false }],
     }, &sink).await.unwrap();
 
-    let err = svc.bill_timesheet(ts, &billing, &sink).await.unwrap_err();
+    let err = svc.bill_timesheet(ts, company, &billing, &sink).await.unwrap_err();
     assert!(matches!(err, ProjectError::Invalid(_)), "nothing billable → refused");
     assert_eq!(billing.invoice_count(), 0, "billing not driven");
 }
@@ -117,7 +117,7 @@ async fn ip4_bill_requires_customer() {
     }).await.unwrap();
     let ts = billable_ts(&svc, project, act, &sink).await;
 
-    let err = svc.bill_timesheet(ts, &billing, &sink).await.unwrap_err();
+    let err = svc.bill_timesheet(ts, company, &billing, &sink).await.unwrap_err();
     assert!(matches!(err, ProjectError::Invalid(_)), "no customer → refused");
     assert_eq!(billing.invoice_count(), 0, "billing not driven");
 }
@@ -142,7 +142,7 @@ async fn ip5_non_billable_excluded_from_billing() {
         ],
     }, &sink).await.unwrap();
 
-    let out = svc.bill_timesheet(ts, &billing, &sink).await.unwrap();
+    let out = svc.bill_timesheet(ts, company, &billing, &sink).await.unwrap();
     // Only the 4 billable hours: 4·500000 = 2,000,000. The 6 non-billable hours never bill.
     assert_eq!(out.amount, dec("2000000.00"), "only billable hours invoiced");
     let (billed, costing): (Decimal, Decimal) = sqlx::query_as(
@@ -198,7 +198,7 @@ async fn ip7_cancel_timesheet_reverses_rollup() {
     assert_eq!(b2, dec("2000000.00"), "re-cancel changes nothing");
 
     // A BILLED timesheet cannot be cancelled (reverse via billing instead).
-    svc.bill_timesheet(good, &billing, &sink).await.unwrap();
+    svc.bill_timesheet(good, company, &billing, &sink).await.unwrap();
     let err = svc.cancel_timesheet(good, &sink).await.unwrap_err();
     assert!(matches!(err, ProjectError::InvalidState(_)), "billed timesheet cannot be cancelled");
 }

@@ -82,7 +82,7 @@ async fn pgc2_bill_timesheet_rolls_billed() {
             hours: dec("8"), billing_rate: None, costing_rate: None, is_billable: true }],
     }, &sink).await.unwrap();
 
-    let out = svc.bill_timesheet(ts, &billing, &sink).await.unwrap();
+    let out = svc.bill_timesheet(ts, company, &billing, &sink).await.unwrap();
     assert!(!out.already);
     assert_eq!(out.amount, dec("4000000.00"));
 

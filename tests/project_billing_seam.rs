@@ -41,7 +41,7 @@ async fn pbseam1_timesheet_bills_to_real_sales_invoice() {
             hours: dec("8"), billing_rate: None, costing_rate: None, is_billable: true }],
     }, &sink).await.unwrap();
 
-    let out = svc.bill_timesheet(ts, &billing, &sink).await.unwrap();
+    let out = svc.bill_timesheet(ts, company, &billing, &sink).await.unwrap();
     assert!(!out.already);
     assert_eq!(out.amount, dec("4000000.00"));
 
@@ -58,7 +58,7 @@ async fn pbseam1_timesheet_bills_to_real_sales_invoice() {
     assert_eq!(line_count, 1, "the billable line carried into the invoice");
 
     // Idempotent: a second bill hands off no second invoice.
-    let again = svc.bill_timesheet(ts, &billing, &sink).await.unwrap();
+    let again = svc.bill_timesheet(ts, company, &billing, &sink).await.unwrap();
     assert!(again.already);
     assert_eq!(again.invoice_id, out.invoice_id);
     let n: i64 = sqlx::query_scalar(
