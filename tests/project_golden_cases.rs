@@ -110,9 +110,9 @@ async fn pgc3_instantiate_template() {
     ).bind(tpl).bind(company).execute(&pool).await.unwrap();
     for (i, subj) in ["Kickoff", "Design", "Handover"].iter().enumerate() {
         sqlx::query(
-            r#"INSERT INTO project.project_template_tasks (id, template_id, subject, expected_time, sequence)
-               VALUES ($1,$2,$3,0,$4)"#,
-        ).bind(Uuid::new_v4()).bind(tpl).bind(subj).bind(i as i32).execute(&pool).await.unwrap();
+            r#"INSERT INTO project.project_template_tasks (id, template_id, company_id, subject, expected_time, sequence)
+               VALUES ($1,$2,$3,$4,0,$5)"#,
+        ).bind(Uuid::new_v4()).bind(tpl).bind(company).bind(subj).bind(i as i32).execute(&pool).await.unwrap();
     }
 
     let project = svc.instantiate_template(tpl, company, "Acme Onboarding".into(), Some(Uuid::new_v4()))
