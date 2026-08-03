@@ -169,7 +169,6 @@ impl ProjectModuleBuilder {
         // TimesheetDetail service
         let timesheet_detail_repository = Arc::new(TimesheetDetailRepository::new(db_pool.clone()));
         let timesheet_detail_service = Arc::new(TimesheetDetailService::with_repository(timesheet_detail_repository.clone()));
-
         // <<< CUSTOM
         let query_service: std::sync::Arc<dyn crate::exports::ProjectQueryService> =
             std::sync::Arc::new(crate::exports::ProjectQueryServiceImpl::new(
@@ -181,6 +180,9 @@ impl ProjectModuleBuilder {
                 timesheet_service.clone(),
                 timesheet_detail_service.clone(),
             ));
+        // END CUSTOM
+
+        // <<< CUSTOM
         // END CUSTOM
 
         Ok(ProjectModule {
