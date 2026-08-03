@@ -34,6 +34,7 @@ user_owned:
   - "tests/integrity_probes.rs"
   - "tests/project_billing_seam.rs"
   - "tests/project_golden_cases.rs"
+  - "tests/query_service_port.rs"
   - "scripts/**"
   # Hand-authored behavior (services + their HTTP surface). Examples:
   # - "src/application/service/onboarding_service.rs"
