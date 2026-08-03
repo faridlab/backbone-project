@@ -33,4 +33,8 @@ pub use timesheet_detail_events::{TimesheetDetailEvent, TimesheetDetailEventPubl
 pub use timesheet_detail_event_handlers::TimesheetDetailEventHandler;
 
 // <<< CUSTOM
+// Consumer: this event surface is staged for the P2 backbone-support integration, where
+// backbone-project subscribes to `IssueEscalated` (published by backbone-support) to open
+// a delivery project. Until that lands the publishers are Noop*; the `events` Cargo feature
+// is a no-op gate (events compile unconditionally — see schema/models/index.model.yaml).
 // END CUSTOM

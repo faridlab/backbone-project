@@ -24,6 +24,12 @@ config:
       - graphql
       - grpc
       - proto
+      # NOTE: `events` is intentionally NOT disabled. The domain/event + exports/events
+      # surface is staged for a documented near-term consumer — the P2 backbone-support
+      # integration, where backbone-project subscribes to `IssueEscalated` to open a
+      # delivery project (see backbone-support/.../support_write_service.rs). Until that
+      # lands the publishers are Noop* and the `events` Cargo feature is a no-op gate
+      # (the files compile unconditionally); re-evaluate when P2 ships.
 
 # Reuse sapiens for user identity (actors) — logical refs, no DB constraint.
 external_imports:
