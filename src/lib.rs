@@ -23,6 +23,7 @@ pub mod infrastructure;
 pub mod application;
 pub mod presentation;
 pub mod seeders;
+pub mod exports;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -56,13 +57,19 @@ use sqlx::PgPool;
 /// let router = project.all_crud_routes();
 /// ```
 pub struct ProjectModule {
-    pub activity_type_service: Arc<ActivityTypeService>,
-    pub project_service: Arc<ProjectService>,
-    pub project_template_service: Arc<ProjectTemplateService>,
-    pub project_template_task_service: Arc<ProjectTemplateTaskService>,
-    pub task_service: Arc<TaskService>,
-    pub timesheet_service: Arc<TimesheetService>,
-    pub timesheet_detail_service: Arc<TimesheetDetailService>,
+    pub(crate) activity_type_service: Arc<ActivityTypeService>,
+    pub(crate) project_service: Arc<ProjectService>,
+    pub(crate) project_template_service: Arc<ProjectTemplateService>,
+    pub(crate) project_template_task_service: Arc<ProjectTemplateTaskService>,
+    pub(crate) task_service: Arc<TaskService>,
+    pub(crate) timesheet_service: Arc<TimesheetService>,
+    pub(crate) timesheet_detail_service: Arc<TimesheetDetailService>,
+    // <<< CUSTOM FIELDS
+    /// Inbound read-port for sibling modules (`use project::exports::ProjectQueryService`).
+    /// `pub` (not `pub(crate)`) so siblings can obtain the trait object — clone the Arc
+    /// to hold `Arc<dyn ProjectQueryService>`. Lives in the CUSTOM FIELDS block (regen-safe).
+    pub query_service: std::sync::Arc<dyn crate::exports::ProjectQueryService>,
+    // END CUSTOM
 }
 
 impl ProjectModule {
@@ -164,6 +171,16 @@ impl ProjectModuleBuilder {
         let timesheet_detail_service = Arc::new(TimesheetDetailService::with_repository(timesheet_detail_repository.clone()));
 
         // <<< CUSTOM
+        let query_service: std::sync::Arc<dyn crate::exports::ProjectQueryService> =
+            std::sync::Arc::new(crate::exports::ProjectQueryServiceImpl::new(
+                activity_type_service.clone(),
+                project_service.clone(),
+                project_template_service.clone(),
+                project_template_task_service.clone(),
+                task_service.clone(),
+                timesheet_service.clone(),
+                timesheet_detail_service.clone(),
+            ));
         // END CUSTOM
 
         Ok(ProjectModule {
@@ -175,6 +192,7 @@ impl ProjectModuleBuilder {
             timesheet_service,
             timesheet_detail_service,
             // <<< CUSTOM
+            query_service,
             // END CUSTOM
         })
     }

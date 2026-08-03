@@ -5,8 +5,6 @@
 //! These services provide the public API for other modules.
 //! They only expose read operations - writes go through events.
 
-use std::sync::Arc;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use uuid::Uuid;
@@ -89,24 +87,161 @@ pub trait ProjectQueryService: Send + Sync {
 }
 
 // ============================================================================
-// QUERY SERVICE IMPLEMENTATION
-// ============================================================================
-
-/// Default implementation of ProjectQueryService
-pub struct ProjectQueryServiceImpl<R> {
-    repository: Arc<R>,
-}
-
-impl<R> ProjectQueryServiceImpl<R> {
-    pub fn new(repository: Arc<R>) -> Self {
-        Self { repository }
-    }
-}
-
-// ============================================================================
 // CUSTOM SERVICES
 // ============================================================================
 
 // <<< CUSTOM SERVICES START >>>
-// Add custom public services here
+//
+// ProjectQueryService — the module-owned INBOUND read-port. The trait is published
+// here so sibling modules `use project::exports::ProjectQueryService`; because only
+// this module owns its repositories, the impl must live HERE (a host cannot implement
+// reads over repos it does not own, unlike an outbound port such as `BillingPort`).
+// Wired in `crate::ProjectModule::build` and exposed as `module.query_service`.
+//
+use std::sync::Arc;
+
+use crate::application::service::{
+    ActivityTypeService, ProjectService, ProjectTemplateService, ProjectTemplateTaskService,
+    TaskService, TimesheetService, TimesheetDetailService,
+};
+use crate::domain::entity::{
+    ActivityType, Project, ProjectTemplate, ProjectTemplateTask, Task, Timesheet, TimesheetDetail,
+};
+
+/// Default implementation of [`ProjectQueryService`], delegating each read to the
+/// matching generic-CRUD service. Reads ride the caller's connection (carrying
+/// `app.company_id`), so a cross-tenant row is simply not found.
+pub struct ProjectQueryServiceImpl {
+    activity_type_service: Arc<ActivityTypeService>,
+    project_service: Arc<ProjectService>,
+    project_template_service: Arc<ProjectTemplateService>,
+    project_template_task_service: Arc<ProjectTemplateTaskService>,
+    task_service: Arc<TaskService>,
+    timesheet_service: Arc<TimesheetService>,
+    timesheet_detail_service: Arc<TimesheetDetailService>,
+}
+
+impl ProjectQueryServiceImpl {
+    /// Build a query service over the seven generic-CRUD services.
+    pub fn new(
+        activity_type_service: Arc<ActivityTypeService>,
+        project_service: Arc<ProjectService>,
+        project_template_service: Arc<ProjectTemplateService>,
+        project_template_task_service: Arc<ProjectTemplateTaskService>,
+        task_service: Arc<TaskService>,
+        timesheet_service: Arc<TimesheetService>,
+        timesheet_detail_service: Arc<TimesheetDetailService>,
+    ) -> Self {
+        Self {
+            activity_type_service,
+            project_service,
+            project_template_service,
+            project_template_task_service,
+            task_service,
+            timesheet_service,
+            timesheet_detail_service,
+        }
+    }
+}
+
+// Serialize an entity's audit metadata into the opaque `serde_json::Value` the public
+// DTOs carry — siblings see metadata as JSON, never as the internal `AuditMetadata`.
+fn meta<S: serde::Serialize>(m: &S) -> serde_json::Value {
+    serde_json::to_value(m).unwrap_or_default()
+}
+
+fn activity_type_dto(e: ActivityType) -> ActivityTypeDto {
+    ActivityTypeDto { id: ActivityTypeId(e.id), company_id: e.company_id, name: e.name, billing_rate: e.billing_rate, costing_rate: e.costing_rate, is_active: e.is_active, metadata: meta(&e.metadata) }
+}
+fn project_dto(e: Project) -> ProjectDto {
+    ProjectDto { id: ProjectId(e.id), company_id: e.company_id, project_name: e.project_name, project_type: e.project_type, customer_id: e.customer_id, source_so_id: e.source_so_id, currency: e.currency, status: e.status, expected_start_date: e.expected_start_date, expected_end_date: e.expected_end_date, total_costing_amount: e.total_costing_amount, total_billable_amount: e.total_billable_amount, total_billed_amount: e.total_billed_amount, notes: e.notes, metadata: meta(&e.metadata) }
+}
+fn project_template_dto(e: ProjectTemplate) -> ProjectTemplateDto {
+    ProjectTemplateDto { id: ProjectTemplateId(e.id), company_id: e.company_id, template_name: e.template_name, project_type: e.project_type, is_active: e.is_active, metadata: meta(&e.metadata) }
+}
+fn project_template_task_dto(e: ProjectTemplateTask) -> ProjectTemplateTaskDto {
+    ProjectTemplateTaskDto { id: ProjectTemplateTaskId(e.id), company_id: e.company_id, template_id: e.template_id, subject: e.subject, task_type: e.task_type, expected_time: e.expected_time, sequence: e.sequence, metadata: meta(&e.metadata) }
+}
+fn task_dto(e: Task) -> TaskDto {
+    TaskDto { id: TaskId(e.id), company_id: e.company_id, project_id: e.project_id, parent_task_id: e.parent_task_id, subject: e.subject, task_type: e.task_type, status: e.status, expected_time: e.expected_time, progress: e.progress, metadata: meta(&e.metadata) }
+}
+fn timesheet_dto(e: Timesheet) -> TimesheetDto {
+    TimesheetDto { id: TimesheetId(e.id), company_id: e.company_id, project_id: e.project_id, employee_id: e.employee_id, currency: e.currency, status: e.status, total_hours: e.total_hours, total_billable_amount: e.total_billable_amount, total_costing_amount: e.total_costing_amount, invoice_id: e.invoice_id, metadata: meta(&e.metadata) }
+}
+fn timesheet_detail_dto(e: TimesheetDetail) -> TimesheetDetailDto {
+    TimesheetDetailDto { id: TimesheetDetailId(e.id), company_id: e.company_id, timesheet_id: e.timesheet_id, activity_type_id: e.activity_type_id, task_id: e.task_id, description: e.description, hours: e.hours, billing_rate: e.billing_rate, costing_rate: e.costing_rate, is_billable: e.is_billable, billable_amount: e.billable_amount, costing_amount: e.costing_amount, metadata: meta(&e.metadata) }
+}
+
+#[async_trait]
+impl ProjectQueryService for ProjectQueryServiceImpl {
+    async fn get_activity_type(&self, id: ActivityTypeId) -> Result<Option<ActivityTypeDto>> {
+        Ok(self.activity_type_service.find_by_id(&id.into_inner().to_string()).await?.map(activity_type_dto))
+    }
+    async fn get_activity_type_summary(&self, id: ActivityTypeId) -> Result<Option<ActivityTypeSummary>> {
+        Ok(self.activity_type_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| ActivityTypeSummary { id: ActivityTypeId(e.id), name: e.name }))
+    }
+    async fn activity_type_exists(&self, id: ActivityTypeId) -> Result<bool> {
+        Ok(self.activity_type_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
+    }
+
+    async fn get_project(&self, id: ProjectId) -> Result<Option<ProjectDto>> {
+        Ok(self.project_service.find_by_id(&id.into_inner().to_string()).await?.map(project_dto))
+    }
+    async fn get_project_summary(&self, id: ProjectId) -> Result<Option<ProjectSummary>> {
+        Ok(self.project_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| ProjectSummary { id: ProjectId(e.id), project_name: e.project_name, status: e.status }))
+    }
+    async fn project_exists(&self, id: ProjectId) -> Result<bool> {
+        Ok(self.project_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
+    }
+
+    async fn get_project_template(&self, id: ProjectTemplateId) -> Result<Option<ProjectTemplateDto>> {
+        Ok(self.project_template_service.find_by_id(&id.into_inner().to_string()).await?.map(project_template_dto))
+    }
+    async fn get_project_template_summary(&self, id: ProjectTemplateId) -> Result<Option<ProjectTemplateSummary>> {
+        Ok(self.project_template_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| ProjectTemplateSummary { id: ProjectTemplateId(e.id), template_name: e.template_name }))
+    }
+    async fn project_template_exists(&self, id: ProjectTemplateId) -> Result<bool> {
+        Ok(self.project_template_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
+    }
+
+    async fn get_project_template_task(&self, id: ProjectTemplateTaskId) -> Result<Option<ProjectTemplateTaskDto>> {
+        Ok(self.project_template_task_service.find_by_id(&id.into_inner().to_string()).await?.map(project_template_task_dto))
+    }
+    async fn get_project_template_task_summary(&self, id: ProjectTemplateTaskId) -> Result<Option<ProjectTemplateTaskSummary>> {
+        Ok(self.project_template_task_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| ProjectTemplateTaskSummary { id: ProjectTemplateTaskId(e.id) }))
+    }
+    async fn project_template_task_exists(&self, id: ProjectTemplateTaskId) -> Result<bool> {
+        Ok(self.project_template_task_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
+    }
+
+    async fn get_task(&self, id: TaskId) -> Result<Option<TaskDto>> {
+        Ok(self.task_service.find_by_id(&id.into_inner().to_string()).await?.map(task_dto))
+    }
+    async fn get_task_summary(&self, id: TaskId) -> Result<Option<TaskSummary>> {
+        Ok(self.task_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| TaskSummary { id: TaskId(e.id), status: e.status }))
+    }
+    async fn task_exists(&self, id: TaskId) -> Result<bool> {
+        Ok(self.task_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
+    }
+
+    async fn get_timesheet(&self, id: TimesheetId) -> Result<Option<TimesheetDto>> {
+        Ok(self.timesheet_service.find_by_id(&id.into_inner().to_string()).await?.map(timesheet_dto))
+    }
+    async fn get_timesheet_summary(&self, id: TimesheetId) -> Result<Option<TimesheetSummary>> {
+        Ok(self.timesheet_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| TimesheetSummary { id: TimesheetId(e.id), status: e.status }))
+    }
+    async fn timesheet_exists(&self, id: TimesheetId) -> Result<bool> {
+        Ok(self.timesheet_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
+    }
+
+    async fn get_timesheet_detail(&self, id: TimesheetDetailId) -> Result<Option<TimesheetDetailDto>> {
+        Ok(self.timesheet_detail_service.find_by_id(&id.into_inner().to_string()).await?.map(timesheet_detail_dto))
+    }
+    async fn get_timesheet_detail_summary(&self, id: TimesheetDetailId) -> Result<Option<TimesheetDetailSummary>> {
+        Ok(self.timesheet_detail_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| TimesheetDetailSummary { id: TimesheetDetailId(e.id) }))
+    }
+    async fn timesheet_detail_exists(&self, id: TimesheetDetailId) -> Result<bool> {
+        Ok(self.timesheet_detail_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
+    }
+}
 // <<< CUSTOM SERVICES END >>>
