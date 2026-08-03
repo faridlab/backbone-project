@@ -372,3 +372,4 @@ impl backbone_core::ApplyUpdateDto<UpdateProjectDto> for Project {
 // Add custom DTOs specific to Project here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

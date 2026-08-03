@@ -281,3 +281,4 @@ impl backbone_core::ApplyUpdateDto<UpdateActivityTypeDto> for ActivityType {
 // Add custom DTOs specific to ActivityType here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

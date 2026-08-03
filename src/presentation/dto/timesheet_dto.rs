@@ -321,3 +321,4 @@ impl backbone_core::ApplyUpdateDto<UpdateTimesheetDto> for Timesheet {
 // Add custom DTOs specific to Timesheet here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+
