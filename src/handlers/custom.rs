@@ -27,7 +27,7 @@ use super::AppState;
 /// # Example
 ///
 /// ```ignore
-/// // In routes/mod.rs:
+/// // In src/presentation/http/mod.rs (e.g. alongside create_guarded_project_routes):
 /// Router::new().route("/health", get(health_check))
 /// ```
 #[allow(dead_code)]

@@ -91,7 +91,7 @@ implementation). See also [the seam / BillingPort](#the-seam--billingport) — t
 port.
 
 ### Presentation layer
-The transport layer (`src/presentation/`, `src/routes/`): HTTP handlers and route composition. Depends
+The transport layer (`src/presentation/http/`): HTTP handlers and route composition. Depends
 on the application layer.
 
 ### Regeneration (regen)

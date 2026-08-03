@@ -79,7 +79,7 @@ Dependencies point **inward only**. Domain depends on nothing.
 
 ```mermaid
 flowchart TD
-    P["Presentation<br/>presentation/http/{timesheet,project,task,…}_handler.rs<br/>routes/mod.rs"]
+    P["Presentation<br/>presentation/http/{timesheet,project,task,…}_handler.rs<br/>routes/generated.rs · create_guarded_project_routes"]
     A["Application — generated<br/>service/{entity}_service.rs (type aliases)<br/>dto/{entity}_dto.rs"]
     A2["Application — hand-authored SEAM<br/>service/project_write_service.rs<br/>service/project_ports.rs · project_events.rs"]
     D["Domain<br/>domain/entity/{project,task,timesheet,…}.rs<br/>domain/repositories/ (ports)"]
@@ -99,7 +99,7 @@ flowchart TD
 | **Application — generated** | `src/application/service/`, `src/application/dto/` | 7 `…Service` **type aliases** over `GenericCrudService`; the Create/Update/Patch/Response DTOs and their conversions | domain |
 | **Application — seam** (hand-authored) | `src/application/service/project_write_service.rs`, `project_ports.rs`, `project_events.rs` | `ProjectWriteService` (the real verbs), the `BillingPort` trait + wire DTOs, the `ProjectEvent` types + `ProjectEventSink` | domain |
 | **Infrastructure** | `src/infrastructure/persistence/` | 7 repository **newtypes** over `GenericCrudRepository<Entity, SoftDelete>` (`TABLE_NAME = "project.<table>"`, `impl_crud_repository!`) | domain, application |
-| **Presentation** | `src/presentation/`, `src/routes/` | `create_<entity>_routes()` wiring `BackboneCrudHandler`; the stateless/stateful route composers | application |
+| **Presentation** | `src/presentation/http/` | `create_<entity>_routes()` wiring `BackboneCrudHandler` (in `routes/generated.rs`); the production `create_guarded_project_routes()` composer | application |
 | **Composition** | `src/lib.rs` | `ProjectModule` / `ProjectModuleBuilder`, public re-exports | all layers (it is the root) |
 
 Three subtleties worth internalizing:

@@ -22,7 +22,7 @@ guide has the working form.
 | Domain | `src/domain/` | Entities, value objects, invariants, repository **traits** | nothing |
 | Application | `src/application/` | Services (type aliases), DTOs, use cases | domain |
 | Infrastructure | `src/infrastructure/` | Repository impls, cache, messaging, jobs | domain, application |
-| Presentation | `src/presentation/`, `src/routes/` | HTTP/gRPC handlers, route composition | application |
+| Presentation | `src/presentation/http/` | HTTP/gRPC handlers, route composition (`routes/generated.rs`, `create_guarded_project_routes`) | application |
 
 Dependency arrows point inward. If you find the domain layer importing `axum` or `sqlx`, something
 is in the wrong layer.
