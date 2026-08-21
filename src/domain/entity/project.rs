@@ -73,7 +73,7 @@ pub struct Project {
 impl Project {
     /// Create a builder for Project
     pub fn builder() -> ProjectBuilder {
-        ProjectBuilder::default()
+        <ProjectBuilder as Default>::default()
     }
 
     /// Create a new Project with required fields
@@ -414,11 +414,11 @@ impl ProjectBuilder {
             id: Uuid::new_v4(),
             company_id,
             project_name,
-            project_type: self.project_type.unwrap_or(ProjectType::default()),
+            project_type: self.project_type.unwrap_or_default(),
             customer_id: self.customer_id,
             source_so_id: self.source_so_id,
             currency: self.currency.unwrap_or("IDR".to_string()),
-            status: self.status.unwrap_or(ProjectStatus::default()),
+            status: self.status.unwrap_or_default(),
             expected_start_date: self.expected_start_date,
             expected_end_date: self.expected_end_date,
             total_costing_amount: self.total_costing_amount.unwrap_or(Decimal::from(0)),

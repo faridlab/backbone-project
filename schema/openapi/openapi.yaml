@@ -2599,7 +2599,7 @@ components:
         - name
         - billing_rate
         - costing_rate
-        - is_active
+        - status
         - metadata
       properties:
         id:
@@ -2615,8 +2615,8 @@ components:
           type: string
         costing_rate:
           type: string
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2640,7 +2640,7 @@ components:
         - name
         - billing_rate
         - costing_rate
-        - is_active
+        - status
         - metadata
       properties:
         company_id:
@@ -2653,8 +2653,8 @@ components:
           type: string
         costing_rate:
           type: string
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2665,7 +2665,7 @@ components:
         - name
         - billing_rate
         - costing_rate
-        - is_active
+        - status
         - metadata
       properties:
         company_id:
@@ -2678,8 +2678,8 @@ components:
           type: string
         costing_rate:
           type: string
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2696,8 +2696,8 @@ components:
           type: string
         costing_rate:
           type: string
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2951,7 +2951,7 @@ components:
         - company_id
         - template_name
         - project_type
-        - is_active
+        - status
         - metadata
       properties:
         id:
@@ -2965,8 +2965,8 @@ components:
           maxLength: 200
         project_type:
           type: string
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -2989,7 +2989,7 @@ components:
         - company_id
         - template_name
         - project_type
-        - is_active
+        - status
         - metadata
       properties:
         company_id:
@@ -3000,8 +3000,8 @@ components:
           maxLength: 200
         project_type:
           type: string
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -3011,7 +3011,7 @@ components:
         - company_id
         - template_name
         - project_type
-        - is_active
+        - status
         - metadata
       properties:
         company_id:
@@ -3022,8 +3022,8 @@ components:
           maxLength: 200
         project_type:
           type: string
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 
@@ -3038,8 +3038,8 @@ components:
           maxLength: 200
         project_type:
           type: string
-        is_active:
-          type: boolean
+        status:
+          type: string
         metadata:
           type: object
 

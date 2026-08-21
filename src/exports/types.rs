@@ -53,7 +53,7 @@ pub struct ActivityTypeDto {
     pub name: String,
     pub billing_rate: Decimal,
     pub costing_rate: Decimal,
-    pub is_active: bool,
+    pub status: ActivityTypeStatus,
     pub metadata: serde_json::Value,
 }
 
@@ -62,6 +62,7 @@ pub struct ActivityTypeDto {
 pub struct ActivityTypeSummary {
     pub id: ActivityTypeId,
     pub name: String,
+    pub status: ActivityTypeStatus,
 }
 
 /// Reference to ActivityType for foreign key relationships
@@ -179,7 +180,7 @@ pub struct ProjectTemplateDto {
     pub company_id: Uuid,
     pub template_name: String,
     pub project_type: ProjectType,
-    pub is_active: bool,
+    pub status: ProjectTemplateStatus,
     pub metadata: serde_json::Value,
 }
 
@@ -188,6 +189,7 @@ pub struct ProjectTemplateDto {
 pub struct ProjectTemplateSummary {
     pub id: ProjectTemplateId,
     pub template_name: String,
+    pub status: ProjectTemplateStatus,
 }
 
 /// Reference to ProjectTemplate for foreign key relationships

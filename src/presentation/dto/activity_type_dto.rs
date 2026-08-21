@@ -19,6 +19,7 @@ use validator::Validate;
 
 use crate::domain::entity::ActivityType;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::ActivityTypeStatus;
 
 // =============================================================================
 // Create DTO
@@ -43,9 +44,7 @@ pub struct CreateActivityTypeDto {
     pub billing_rate: Decimal,
     #[serde(alias = "costing_rate")]
     pub costing_rate: Decimal,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: ActivityTypeStatus,
 }
 
 // =============================================================================
@@ -71,9 +70,7 @@ pub struct UpdateActivityTypeDto {
     pub billing_rate: Decimal,
     #[serde(alias = "costing_rate")]
     pub costing_rate: Decimal,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: ActivityTypeStatus,
 }
 
 // =============================================================================
@@ -100,15 +97,14 @@ pub struct PatchActivityTypeDto {
     pub billing_rate: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "costing_rate")]
     pub costing_rate: Option<Decimal>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "is_active")]
-    pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<ActivityTypeStatus>,
 }
 
 impl PatchActivityTypeDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.name.is_some() || self.billing_rate.is_some() || self.costing_rate.is_some() || self.is_active.is_some()
+        self.company_id.is_some() || self.name.is_some() || self.billing_rate.is_some() || self.costing_rate.is_some() || self.status.is_some()
     }
 }
 
@@ -132,8 +128,7 @@ pub struct ActivityTypeResponseDto {
     pub name: String,
     pub billing_rate: Decimal,
     pub costing_rate: Decimal,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub is_active: bool,
+    pub status: ActivityTypeStatus,
     pub metadata: AuditMetadata,
 }
 
@@ -209,7 +204,7 @@ impl From<ActivityType> for ActivityTypeResponseDto {
             name: entity.name,
             billing_rate: entity.billing_rate,
             costing_rate: entity.costing_rate,
-            is_active: entity.is_active,
+            status: entity.status,
             metadata: entity.metadata,
         }
     }
@@ -236,7 +231,7 @@ impl From<CreateActivityTypeDto> for ActivityType {
             name: dto.name,
             billing_rate: dto.billing_rate,
             costing_rate: dto.costing_rate,
-            is_active: dto.is_active,
+            status: dto.status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -250,7 +245,7 @@ impl From<&ActivityType> for ActivityTypeResponseDto {
             name: entity.name.clone(),
             billing_rate: entity.billing_rate.clone(),
             costing_rate: entity.costing_rate.clone(),
-            is_active: entity.is_active.clone(),
+            status: entity.status.clone(),
             metadata: entity.metadata.clone(),
         }
     }
@@ -268,7 +263,7 @@ impl backbone_core::ApplyUpdateDto<UpdateActivityTypeDto> for ActivityType {
         self.name = dto.name;
         self.billing_rate = dto.billing_rate;
         self.costing_rate = dto.costing_rate;
-        self.is_active = dto.is_active;
+        self.status = dto.status;
         Ok(self)
     }
 }
@@ -281,4 +276,3 @@ impl backbone_core::ApplyUpdateDto<UpdateActivityTypeDto> for ActivityType {
 // Add custom DTOs specific to ActivityType here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

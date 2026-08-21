@@ -8,7 +8,7 @@
 //! ## Usage from other modules
 //!
 //! ```text
-//! use project::exports::{ActivityTypeDto, ProjectQueryService};
+//! use project::exports::{ActivityTypeDto};
 //! ```
 
 mod types;
@@ -48,9 +48,6 @@ pub use events::*;
 /// - `TimesheetDetailDto` - Data transfer object for TimesheetDetail
 /// - `TimesheetDetailSummary` - Summary view of TimesheetDetail
 /// - `TimesheetDetailId` - Type-safe ID wrapper
-///
-/// ## Public Services
-/// - `ProjectQueryService` - Read-only queries
 ///
 /// ## Public Events
 /// - `ActivityTypeCreatedEvent` - Published when ActivityType is created

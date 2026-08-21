@@ -27,8 +27,8 @@ async fn pbseam1_timesheet_bills_to_real_sales_invoice() {
     let customer = Uuid::new_v4();
     let act = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.activity_types (id, company_id, name, billing_rate, costing_rate, is_active)
-           VALUES ($1,$2,'Consulting',$3,$4,true)"#,
+        r#"INSERT INTO project.activity_types (id, company_id, name, billing_rate, costing_rate, status)
+           VALUES ($1,$2,'Consulting',$3,$4,'active')"#,
     ).bind(act).bind(company).bind(dec("500000")).bind(dec("300000")).execute(&pool).await.unwrap();
 
     let project = svc.create_project(NewProject {

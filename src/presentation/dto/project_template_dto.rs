@@ -18,6 +18,7 @@ use validator::Validate;
 
 use crate::domain::entity::ProjectTemplate;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::ProjectTemplateStatus;
 use crate::domain::entity::ProjectType;
 
 // =============================================================================
@@ -42,9 +43,7 @@ pub struct CreateProjectTemplateDto {
     pub template_name: String,
     #[serde(alias = "project_type")]
     pub project_type: ProjectType,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: ProjectTemplateStatus,
 }
 
 // =============================================================================
@@ -69,9 +68,7 @@ pub struct UpdateProjectTemplateDto {
     pub template_name: String,
     #[serde(alias = "project_type")]
     pub project_type: ProjectType,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: ProjectTemplateStatus,
 }
 
 // =============================================================================
@@ -96,15 +93,14 @@ pub struct PatchProjectTemplateDto {
     pub template_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "project_type")]
     pub project_type: Option<ProjectType>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "is_active")]
-    pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<ProjectTemplateStatus>,
 }
 
 impl PatchProjectTemplateDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.template_name.is_some() || self.project_type.is_some() || self.is_active.is_some()
+        self.company_id.is_some() || self.template_name.is_some() || self.project_type.is_some() || self.status.is_some()
     }
 }
 
@@ -127,8 +123,7 @@ pub struct ProjectTemplateResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub template_name: String,
     pub project_type: ProjectType,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub is_active: bool,
+    pub status: ProjectTemplateStatus,
     pub metadata: AuditMetadata,
 }
 
@@ -203,7 +198,7 @@ impl From<ProjectTemplate> for ProjectTemplateResponseDto {
             company_id: entity.company_id,
             template_name: entity.template_name,
             project_type: entity.project_type,
-            is_active: entity.is_active,
+            status: entity.status,
             metadata: entity.metadata,
         }
     }
@@ -229,7 +224,7 @@ impl From<CreateProjectTemplateDto> for ProjectTemplate {
             company_id: dto.company_id,
             template_name: dto.template_name,
             project_type: dto.project_type,
-            is_active: dto.is_active,
+            status: dto.status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -242,7 +237,7 @@ impl From<&ProjectTemplate> for ProjectTemplateResponseDto {
             company_id: entity.company_id.clone(),
             template_name: entity.template_name.clone(),
             project_type: entity.project_type.clone(),
-            is_active: entity.is_active.clone(),
+            status: entity.status.clone(),
             metadata: entity.metadata.clone(),
         }
     }
@@ -259,7 +254,7 @@ impl backbone_core::ApplyUpdateDto<UpdateProjectTemplateDto> for ProjectTemplate
         self.company_id = dto.company_id;
         self.template_name = dto.template_name;
         self.project_type = dto.project_type;
-        self.is_active = dto.is_active;
+        self.status = dto.status;
         Ok(self)
     }
 }
@@ -272,4 +267,3 @@ impl backbone_core::ApplyUpdateDto<UpdateProjectTemplateDto> for ProjectTemplate
 // Add custom DTOs specific to ProjectTemplate here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

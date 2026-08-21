@@ -186,4 +186,3 @@ pub fn create_protected_activity_type_routes<A: AuthMiddleware + Send + Sync + '
             }
         }))
 }
-

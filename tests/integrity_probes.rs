@@ -13,8 +13,8 @@ use uuid::Uuid;
 async fn an_activity(pool: &sqlx::PgPool, company: Uuid) -> Uuid {
     let id = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.activity_types (id, company_id, name, billing_rate, costing_rate, is_active)
-           VALUES ($1,$2,'Consulting',$3,$4,true)"#,
+        r#"INSERT INTO project.activity_types (id, company_id, name, billing_rate, costing_rate, status)
+           VALUES ($1,$2,'Consulting',$3,$4,'active')"#,
     )
     .bind(id).bind(company).bind(dec("500000")).bind(dec("300000"))
     .execute(pool).await.unwrap();

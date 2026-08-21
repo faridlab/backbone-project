@@ -5,15 +5,34 @@
 //! These services provide the public API for other modules.
 //! They only expose read operations - writes go through events.
 
+
+// ============================================================================
+// CUSTOM SERVICES
+// ============================================================================
+
+// <<< CUSTOM SERVICES START >>>
+//
+// ProjectQueryService — the module-owned INBOUND read-port. The trait is published
+// here so sibling modules `use project::exports::ProjectQueryService`; because only
+// this module owns its repositories, the impl must live HERE (a host cannot implement
+// reads over repos it does not own, unlike an outbound port such as `BillingPort`).
+// Wired in `crate::ProjectModule::build` and exposed as `module.query_service`.
+//
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use uuid::Uuid;
 
 use super::types::*;
 
-// ============================================================================
-// QUERY SERVICE TRAIT
-// ============================================================================
+use crate::application::service::{
+    ActivityTypeService, ProjectService, ProjectTemplateService, ProjectTemplateTaskService,
+    TaskService, TimesheetService, TimesheetDetailService,
+};
+use crate::domain::entity::{
+    ActivityType, Project, ProjectTemplate, ProjectTemplateTask, Task, Timesheet, TimesheetDetail,
+};
 
 /// Public query service for Project module
 ///
@@ -83,30 +102,7 @@ pub trait ProjectQueryService: Send + Sync {
 
     /// Check if TimesheetDetail exists
     async fn timesheet_detail_exists(&self, id: TimesheetDetailId) -> Result<bool>;
-
 }
-
-// ============================================================================
-// CUSTOM SERVICES
-// ============================================================================
-
-// <<< CUSTOM SERVICES START >>>
-//
-// ProjectQueryService — the module-owned INBOUND read-port. The trait is published
-// here so sibling modules `use project::exports::ProjectQueryService`; because only
-// this module owns its repositories, the impl must live HERE (a host cannot implement
-// reads over repos it does not own, unlike an outbound port such as `BillingPort`).
-// Wired in `crate::ProjectModule::build` and exposed as `module.query_service`.
-//
-use std::sync::Arc;
-
-use crate::application::service::{
-    ActivityTypeService, ProjectService, ProjectTemplateService, ProjectTemplateTaskService,
-    TaskService, TimesheetService, TimesheetDetailService,
-};
-use crate::domain::entity::{
-    ActivityType, Project, ProjectTemplate, ProjectTemplateTask, Task, Timesheet, TimesheetDetail,
-};
 
 /// Default implementation of [`ProjectQueryService`], delegating each read to the
 /// matching generic-CRUD service. Reads ride the caller's connection (carrying
@@ -151,13 +147,13 @@ fn meta<S: serde::Serialize>(m: &S) -> serde_json::Value {
 }
 
 fn activity_type_dto(e: ActivityType) -> ActivityTypeDto {
-    ActivityTypeDto { id: ActivityTypeId(e.id), company_id: e.company_id, name: e.name, billing_rate: e.billing_rate, costing_rate: e.costing_rate, is_active: e.is_active, metadata: meta(&e.metadata) }
+    ActivityTypeDto { id: ActivityTypeId(e.id), company_id: e.company_id, name: e.name, billing_rate: e.billing_rate, costing_rate: e.costing_rate, status: e.status, metadata: meta(&e.metadata) }
 }
 fn project_dto(e: Project) -> ProjectDto {
     ProjectDto { id: ProjectId(e.id), company_id: e.company_id, project_name: e.project_name, project_type: e.project_type, customer_id: e.customer_id, source_so_id: e.source_so_id, currency: e.currency, status: e.status, expected_start_date: e.expected_start_date, expected_end_date: e.expected_end_date, total_costing_amount: e.total_costing_amount, total_billable_amount: e.total_billable_amount, total_billed_amount: e.total_billed_amount, notes: e.notes, metadata: meta(&e.metadata) }
 }
 fn project_template_dto(e: ProjectTemplate) -> ProjectTemplateDto {
-    ProjectTemplateDto { id: ProjectTemplateId(e.id), company_id: e.company_id, template_name: e.template_name, project_type: e.project_type, is_active: e.is_active, metadata: meta(&e.metadata) }
+    ProjectTemplateDto { id: ProjectTemplateId(e.id), company_id: e.company_id, template_name: e.template_name, project_type: e.project_type, status: e.status, metadata: meta(&e.metadata) }
 }
 fn project_template_task_dto(e: ProjectTemplateTask) -> ProjectTemplateTaskDto {
     ProjectTemplateTaskDto { id: ProjectTemplateTaskId(e.id), company_id: e.company_id, template_id: e.template_id, subject: e.subject, task_type: e.task_type, expected_time: e.expected_time, sequence: e.sequence, metadata: meta(&e.metadata) }
@@ -178,7 +174,7 @@ impl ProjectQueryService for ProjectQueryServiceImpl {
         Ok(self.activity_type_service.find_by_id(&id.into_inner().to_string()).await?.map(activity_type_dto))
     }
     async fn get_activity_type_summary(&self, id: ActivityTypeId) -> Result<Option<ActivityTypeSummary>> {
-        Ok(self.activity_type_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| ActivityTypeSummary { id: ActivityTypeId(e.id), name: e.name }))
+        Ok(self.activity_type_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| ActivityTypeSummary { id: ActivityTypeId(e.id), name: e.name, status: e.status }))
     }
     async fn activity_type_exists(&self, id: ActivityTypeId) -> Result<bool> {
         Ok(self.activity_type_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
@@ -198,7 +194,7 @@ impl ProjectQueryService for ProjectQueryServiceImpl {
         Ok(self.project_template_service.find_by_id(&id.into_inner().to_string()).await?.map(project_template_dto))
     }
     async fn get_project_template_summary(&self, id: ProjectTemplateId) -> Result<Option<ProjectTemplateSummary>> {
-        Ok(self.project_template_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| ProjectTemplateSummary { id: ProjectTemplateId(e.id), template_name: e.template_name }))
+        Ok(self.project_template_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| ProjectTemplateSummary { id: ProjectTemplateId(e.id), template_name: e.template_name, status: e.status }))
     }
     async fn project_template_exists(&self, id: ProjectTemplateId) -> Result<bool> {
         Ok(self.project_template_service.find_by_id(&id.into_inner().to_string()).await?.is_some())

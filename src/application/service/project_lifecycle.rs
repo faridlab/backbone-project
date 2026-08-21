@@ -62,7 +62,7 @@ impl ProjectWriteService {
         company_scope::with_company_scope(Some(company_id), async move {
         let tpl = self.templates.find_for_instantiate(&self.pool, template_id).await?
             .ok_or(ProjectError::NotFound("template"))?;
-        if !tpl.is_active {
+        if tpl.status != "active" {
             return Err(ProjectError::InvalidState("template is not active"));
         }
         let project_type = tpl.project_type;

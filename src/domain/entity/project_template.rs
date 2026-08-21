@@ -4,6 +4,7 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 use super::ProjectType;
+use super::ProjectTemplateStatus;
 use super::AuditMetadata;
 
 /// Strongly-typed ID for ProjectTemplate
@@ -53,7 +54,7 @@ pub struct ProjectTemplate {
     pub company_id: Uuid,
     pub template_name: String,
     pub project_type: ProjectType,
-    pub is_active: bool,
+    pub status: ProjectTemplateStatus,
     #[serde(default)]
     #[sqlx(json)]
     pub metadata: AuditMetadata,
@@ -62,17 +63,17 @@ pub struct ProjectTemplate {
 impl ProjectTemplate {
     /// Create a builder for ProjectTemplate
     pub fn builder() -> ProjectTemplateBuilder {
-        ProjectTemplateBuilder::default()
+        <ProjectTemplateBuilder as Default>::default()
     }
 
     /// Create a new ProjectTemplate with required fields
-    pub fn new(company_id: Uuid, template_name: String, project_type: ProjectType, is_active: bool) -> Self {
+    pub fn new(company_id: Uuid, template_name: String, project_type: ProjectType, status: ProjectTemplateStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
             template_name,
             project_type,
-            is_active,
+            status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -127,6 +128,11 @@ impl ProjectTemplate {
         self.metadata.deleted_by.as_ref()
     }
 
+    /// Get the current status
+    pub fn status(&self) -> &ProjectTemplateStatus {
+        &self.status
+    }
+
 
     // ==========================================================
     // Partial Update
@@ -145,8 +151,8 @@ impl ProjectTemplate {
                 "project_type" => {
                     if let Ok(v) = serde_json::from_value(value) { self.project_type = v; }
                 }
-                "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                "status" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -204,6 +210,7 @@ impl backbone_orm::EntityRepoMeta for ProjectTemplate {
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("project_type".to_string(), "project_type".to_string());
+        m.insert("status".to_string(), "project_template_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -223,7 +230,7 @@ pub struct ProjectTemplateBuilder {
     company_id: Option<Uuid>,
     template_name: Option<String>,
     project_type: Option<ProjectType>,
-    is_active: Option<bool>,
+    status: Option<ProjectTemplateStatus>,
 }
 
 impl ProjectTemplateBuilder {
@@ -245,9 +252,9 @@ impl ProjectTemplateBuilder {
         self
     }
 
-    /// Set the is_active field (default: `true`)
-    pub fn is_active(mut self, value: bool) -> Self {
-        self.is_active = Some(value);
+    /// Set the status field (default: `ProjectTemplateStatus::default()`)
+    pub fn status(mut self, value: ProjectTemplateStatus) -> Self {
+        self.status = Some(value);
         self
     }
 
@@ -262,8 +269,8 @@ impl ProjectTemplateBuilder {
             id: Uuid::new_v4(),
             company_id,
             template_name,
-            project_type: self.project_type.unwrap_or(ProjectType::default()),
-            is_active: self.is_active.unwrap_or(true),
+            project_type: self.project_type.unwrap_or_default(),
+            status: self.status.unwrap_or_default(),
             metadata: AuditMetadata::default(),
         })
     }

@@ -13,8 +13,8 @@ use uuid::Uuid;
 async fn an_activity(pool: &sqlx::PgPool, company: Uuid, billing: &str, costing: &str) -> Uuid {
     let id = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.activity_types (id, company_id, name, billing_rate, costing_rate, is_active)
-           VALUES ($1,$2,'Consulting',$3,$4,true)"#,
+        r#"INSERT INTO project.activity_types (id, company_id, name, billing_rate, costing_rate, status)
+           VALUES ($1,$2,'Consulting',$3,$4,'active')"#,
     )
     .bind(id).bind(company).bind(dec(billing)).bind(dec(costing))
     .execute(pool).await.unwrap();
@@ -105,8 +105,8 @@ async fn pgc3_instantiate_template() {
     let company = Uuid::new_v4();
     let tpl = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.project_templates (id, company_id, template_name, project_type, is_active)
-           VALUES ($1,$2,'Onboarding','external',true)"#,
+        r#"INSERT INTO project.project_templates (id, company_id, template_name, project_type, status)
+           VALUES ($1,$2,'Onboarding','external','active')"#,
     ).bind(tpl).bind(company).execute(&pool).await.unwrap();
     for (i, subj) in ["Kickoff", "Design", "Handover"].iter().enumerate() {
         sqlx::query(

@@ -186,4 +186,3 @@ pub fn create_protected_task_routes<A: AuthMiddleware + Send + Sync + 'static>(
             }
         }))
 }
-

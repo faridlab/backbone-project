@@ -32,14 +32,25 @@ models:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
         description: "Default internal cost per hour"
-      is_active:
-        type: boolean
-        attributes: ["@default(true)"]
-        description: "Whether this activity type can be logged against"
+      # replaces is_active (boolean flipped to lifecycle enum)
+      status:
+        type: ActivityTypeStatus
+        attributes: ["@default(active)"]
+        description: "Lifecycle (inactive activity types are refused for new timesheet lines; logged history keeps them)"
       metadata:
         type: Metadata
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
     indexes:
       - type: index
-        fields: [company_id, is_active]
+        fields: [company_id, status]
+
+enums:
+  - name: ActivityTypeStatus
+    description: "Lifecycle of a project activity type"
+    variants:
+      - name: active
+        description: "The activity type can be logged against"
+        default: true
+      - name: inactive
+        description: "Retired; refused for new timesheet lines, logged history keeps the reference"

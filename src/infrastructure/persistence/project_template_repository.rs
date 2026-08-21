@@ -42,7 +42,7 @@ impl ProjectTemplateRepository {
 /// be used at all.
 pub struct TemplateRow {
     pub project_type: String,
-    pub is_active: bool,
+    pub status: String,
 }
 
 /// Hand-written ProjectTemplate SQL. Lives here (not in the write service) per the module's 4-layer
@@ -61,14 +61,14 @@ impl ProjectTemplateRepository {
         let row = company_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT project_type::text AS project_type, is_active FROM project.project_templates
+                r#"SELECT project_type::text AS project_type, status::text AS status FROM project.project_templates
                    WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
             .bind(template_id),
         )
         .await?;
         Ok(row.map(|r| TemplateRow {
-            project_type: r.get("project_type"), is_active: r.get("is_active"),
+            project_type: r.get("project_type"), status: r.get("status"),
         }))
     }
 }

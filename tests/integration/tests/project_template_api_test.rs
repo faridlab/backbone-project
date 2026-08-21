@@ -27,7 +27,7 @@ impl TestDataGenerator for ProjectTemplateTestData {
             "company_id": Uuid::new_v4().to_string(),
             "template_name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "project_type": "external",
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }
@@ -39,7 +39,7 @@ impl TestDataGenerator for ProjectTemplateTestData {
             "company_id": Uuid::new_v4().to_string(),
             "template_name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "project_type": "external",
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }

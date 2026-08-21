@@ -186,4 +186,3 @@ pub fn create_protected_timesheet_detail_routes<A: AuthMiddleware + Send + Sync 
             }
         }))
 }
-

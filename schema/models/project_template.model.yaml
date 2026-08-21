@@ -28,17 +28,18 @@ models:
         type: ProjectType
         attributes: ["@required", "@default(external)"]
         description: "Default project type for instances"
-      is_active:
-        type: boolean
-        attributes: ["@default(true)"]
-        description: "Whether this template can be instantiated"
+      # replaces is_active (boolean flipped to lifecycle enum)
+      status:
+        type: ProjectTemplateStatus
+        attributes: ["@default(active)"]
+        description: "Lifecycle (inactive templates are refused for instantiation; existing projects keep their materialized tasks)"
       metadata:
         type: Metadata
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
     indexes:
       - type: index
-        fields: [company_id, is_active]
+        fields: [company_id, status]
 
   - name: ProjectTemplateTask
     collection: project_template_tasks
@@ -81,3 +82,13 @@ models:
         fields: [template_id]
       - type: index
         fields: [company_id]
+
+enums:
+  - name: ProjectTemplateStatus
+    description: "Lifecycle of a project template"
+    variants:
+      - name: active
+        description: "The template can be instantiated"
+        default: true
+      - name: inactive
+        description: "Retired; refused for instantiation, existing projects keep their materialized tasks"

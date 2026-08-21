@@ -314,4 +314,3 @@ impl backbone_core::ApplyUpdateDto<UpdateTaskDto> for Task {
 // Add custom DTOs specific to Task here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

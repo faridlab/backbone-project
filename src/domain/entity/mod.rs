@@ -9,8 +9,10 @@ pub mod project_template_task;
 pub mod task;
 pub mod timesheet;
 pub mod timesheet_detail;
+pub mod activity_type_status;
 pub mod project_type;
 pub mod project_status;
+pub mod project_template_status;
 pub mod task_status;
 pub mod timesheet_status;
 
@@ -36,8 +38,10 @@ pub use timesheet::TimesheetId;
 pub use timesheet_detail::TimesheetDetail;
 pub use timesheet_detail::TimesheetDetailBuilder;
 pub use timesheet_detail::TimesheetDetailId;
+pub use activity_type_status::ActivityTypeStatus;
 pub use project_type::ProjectType;
 pub use project_status::ProjectStatus;
+pub use project_template_status::ProjectTemplateStatus;
 pub use task_status::TaskStatus;
 pub use timesheet_status::TimesheetStatus;
 

@@ -14,6 +14,17 @@ mod timesheet_detail_repository;
 
 // Custom persistence modules
 // <<< CUSTOM
+// The hand-written project SQL's parameter/projection types (see the seven `*_repository` modules, all
+// declared `user_owned` in metaphor.codegen.yaml).
+pub use activity_type_repository::ActivityRatesRow;
+pub use project_repository::{
+    NewProjectRow, ProjectCompletionRow, ProjectScopeRow, ProjectTimeLogRow,
+};
+pub use project_template_repository::TemplateRow;
+pub use project_template_task_repository::TemplateTaskRow;
+pub use task_repository::NewTaskRow;
+pub use timesheet_detail_repository::{BillableLineRow, NewTimesheetDetailRow};
+pub use timesheet_repository::{NewTimesheetRow, TimesheetBillingRow, TimesheetCancelRow};
 // END CUSTOM
 
 // Re-exports
@@ -34,15 +45,4 @@ pub use backbone_orm::repository::{
 
 // Re-export custom persistence types
 // <<< CUSTOM
-// The hand-written project SQL's parameter/projection types (see the seven `*_repository` modules, all
-// declared `user_owned` in metaphor.codegen.yaml).
-pub use activity_type_repository::ActivityRatesRow;
-pub use project_repository::{
-    NewProjectRow, ProjectCompletionRow, ProjectScopeRow, ProjectTimeLogRow,
-};
-pub use project_template_repository::TemplateRow;
-pub use project_template_task_repository::TemplateTaskRow;
-pub use task_repository::NewTaskRow;
-pub use timesheet_detail_repository::{BillableLineRow, NewTimesheetDetailRow};
-pub use timesheet_repository::{NewTimesheetRow, TimesheetBillingRow, TimesheetCancelRow};
 // END CUSTOM

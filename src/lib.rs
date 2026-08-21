@@ -109,10 +109,39 @@ impl ProjectModule {
     /// mount exposes unguarded writes. Compose a guarded router (read + validated
     /// writes) for production, or call `all_crud_routes()` to opt into the full
     /// unguarded surface explicitly.
-    #[deprecated(note = "mounts unvalidated generic CRUD on every entity; compose a guarded router for production, or call all_crud_routes() for the intentional full/unguarded surface")]
+    #[deprecated(note = "mounts unvalidated generic CRUD; prefer readonly_routes() + validated writes, or all_crud_routes() for the full/unguarded surface")]
     pub fn routes(&self) -> Router {
         self.all_crud_routes()
     }
+
+    /// Read-only routes for every entity (GET endpoints only) — the safe base.
+    ///
+    /// Generic mutation can't reach here, so this surface cannot bypass a
+    /// validated write service's invariants. Use this as the production base and
+    /// merge validated write routes (or a write service's HTTP layer) onto it.
+    pub fn readonly_routes(&self) -> Router {
+        use presentation::http::{
+            create_activity_type_read_routes,
+            create_project_read_routes,
+            create_project_template_read_routes,
+            create_project_template_task_read_routes,
+            create_task_read_routes,
+            create_timesheet_read_routes,
+            create_timesheet_detail_read_routes,
+        };
+
+        Router::new()
+            .merge(create_activity_type_read_routes(self.activity_type_service.clone()))
+            .merge(create_project_read_routes(self.project_service.clone()))
+            .merge(create_project_template_read_routes(self.project_template_service.clone()))
+            .merge(create_project_template_task_read_routes(self.project_template_task_service.clone()))
+            .merge(create_task_read_routes(self.task_service.clone()))
+            .merge(create_timesheet_read_routes(self.timesheet_service.clone()))
+            .merge(create_timesheet_detail_read_routes(self.timesheet_detail_service.clone()))
+    }
+
+    // <<< CUSTOM METHODS
+    // END CUSTOM
 }
 
 /// Builder for ProjectModule
@@ -169,6 +198,7 @@ impl ProjectModuleBuilder {
         // TimesheetDetail service
         let timesheet_detail_repository = Arc::new(TimesheetDetailRepository::new(db_pool.clone()));
         let timesheet_detail_service = Arc::new(TimesheetDetailService::with_repository(timesheet_detail_repository.clone()));
+
         // <<< CUSTOM
         let query_service: std::sync::Arc<dyn crate::exports::ProjectQueryService> =
             std::sync::Arc::new(crate::exports::ProjectQueryServiceImpl::new(
@@ -180,9 +210,6 @@ impl ProjectModuleBuilder {
                 timesheet_service.clone(),
                 timesheet_detail_service.clone(),
             ));
-        // END CUSTOM
-
-        // <<< CUSTOM
         // END CUSTOM
 
         Ok(ProjectModule {

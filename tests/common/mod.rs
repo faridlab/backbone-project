@@ -100,6 +100,7 @@ impl BillingPort for RealBilling {
                 source_so_id: None,
                 posting_date: chrono::Utc::now().date_naive(),
                 due_date: None,
+                payment_term_id: None,
                 currency: Some(req.currency.clone()),
                 receivable_account_id: Uuid::new_v4(),
                 lines: req
@@ -111,6 +112,7 @@ impl BillingPort for RealBilling {
                         description: l.description.clone(),
                         quantity: l.hours,
                         unit_price: l.rate,
+                        tax_template_id: None,
                     })
                     .collect(),
                 tax_lines: vec![],

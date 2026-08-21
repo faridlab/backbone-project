@@ -14,17 +14,6 @@ pub mod timesheet_handler;
 pub mod timesheet_detail_handler;
 
 // <<< CUSTOM
-// END CUSTOM
-
-// Re-exports
-pub use activity_type_handler::{create_activity_type_routes, create_activity_type_read_routes, create_activity_type_write_routes};
-pub use project_handler::{create_project_routes, create_project_read_routes, create_project_write_routes};
-pub use project_template_handler::{create_project_template_routes, create_project_template_read_routes, create_project_template_write_routes};
-pub use project_template_task_handler::{create_project_template_task_routes, create_project_template_task_read_routes, create_project_template_task_write_routes};
-pub use task_handler::{create_task_routes, create_task_read_routes, create_task_write_routes};
-pub use timesheet_handler::{create_timesheet_routes, create_timesheet_read_routes, create_timesheet_write_routes};
-pub use timesheet_detail_handler::{create_timesheet_detail_routes, create_timesheet_detail_read_routes, create_timesheet_detail_write_routes};
-// <<< CUSTOM
 /// Guarded route composition for production.
 ///
 /// The five aggregate-root / master entities get full generic CRUD. The two aggregate-leaf
@@ -48,4 +37,15 @@ pub fn create_guarded_project_routes(module: &crate::ProjectModule) -> axum::Rou
         .merge(create_task_routes(module.task_service.clone()))
         .merge(create_timesheet_routes(module.timesheet_service.clone()))
 }
+// END CUSTOM
+
+// Re-exports
+pub use activity_type_handler::{create_activity_type_routes, create_activity_type_read_routes, create_activity_type_write_routes};
+pub use project_handler::{create_project_routes, create_project_read_routes, create_project_write_routes};
+pub use project_template_handler::{create_project_template_routes, create_project_template_read_routes, create_project_template_write_routes};
+pub use project_template_task_handler::{create_project_template_task_routes, create_project_template_task_read_routes, create_project_template_task_write_routes};
+pub use task_handler::{create_task_routes, create_task_read_routes, create_task_write_routes};
+pub use timesheet_handler::{create_timesheet_routes, create_timesheet_read_routes, create_timesheet_write_routes};
+pub use timesheet_detail_handler::{create_timesheet_detail_routes, create_timesheet_detail_read_routes, create_timesheet_detail_write_routes};
+// <<< CUSTOM
 // END CUSTOM

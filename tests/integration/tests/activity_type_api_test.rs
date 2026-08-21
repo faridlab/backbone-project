@@ -28,7 +28,7 @@ impl TestDataGenerator for ActivityTypeTestData {
             "name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "billing_rate": 0,
             "costing_rate": 0,
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }
@@ -41,7 +41,7 @@ impl TestDataGenerator for ActivityTypeTestData {
             "name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "billing_rate": 0,
             "costing_rate": 0,
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }

@@ -63,7 +63,7 @@ pub struct ProjectTemplateTask {
 impl ProjectTemplateTask {
     /// Create a builder for ProjectTemplateTask
     pub fn builder() -> ProjectTemplateTaskBuilder {
-        ProjectTemplateTaskBuilder::default()
+        <ProjectTemplateTaskBuilder as Default>::default()
     }
 
     /// Create a new ProjectTemplateTask with required fields

@@ -297,4 +297,3 @@ impl backbone_core::ApplyUpdateDto<UpdateProjectTemplateTaskDto> for ProjectTemp
 // Add custom DTOs specific to ProjectTemplateTask here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

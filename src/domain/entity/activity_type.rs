@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 use rust_decimal::Decimal;
+
+use super::ActivityTypeStatus;
 use super::AuditMetadata;
 
 /// Strongly-typed ID for ActivityType
@@ -53,7 +55,7 @@ pub struct ActivityType {
     pub name: String,
     pub billing_rate: Decimal,
     pub costing_rate: Decimal,
-    pub is_active: bool,
+    pub status: ActivityTypeStatus,
     #[serde(default)]
     #[sqlx(json)]
     pub metadata: AuditMetadata,
@@ -62,18 +64,18 @@ pub struct ActivityType {
 impl ActivityType {
     /// Create a builder for ActivityType
     pub fn builder() -> ActivityTypeBuilder {
-        ActivityTypeBuilder::default()
+        <ActivityTypeBuilder as Default>::default()
     }
 
     /// Create a new ActivityType with required fields
-    pub fn new(company_id: Uuid, name: String, billing_rate: Decimal, costing_rate: Decimal, is_active: bool) -> Self {
+    pub fn new(company_id: Uuid, name: String, billing_rate: Decimal, costing_rate: Decimal, status: ActivityTypeStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
             name,
             billing_rate,
             costing_rate,
-            is_active,
+            status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -128,6 +130,11 @@ impl ActivityType {
         self.metadata.deleted_by.as_ref()
     }
 
+    /// Get the current status
+    pub fn status(&self) -> &ActivityTypeStatus {
+        &self.status
+    }
+
 
     // ==========================================================
     // Partial Update
@@ -149,8 +156,8 @@ impl ActivityType {
                 "costing_rate" => {
                     if let Ok(v) = serde_json::from_value(value) { self.costing_rate = v; }
                 }
-                "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                "status" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -207,6 +214,7 @@ impl backbone_orm::EntityRepoMeta for ActivityType {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("company_id".to_string(), "uuid".to_string());
+        m.insert("status".to_string(), "activity_type_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -227,7 +235,7 @@ pub struct ActivityTypeBuilder {
     name: Option<String>,
     billing_rate: Option<Decimal>,
     costing_rate: Option<Decimal>,
-    is_active: Option<bool>,
+    status: Option<ActivityTypeStatus>,
 }
 
 impl ActivityTypeBuilder {
@@ -255,9 +263,9 @@ impl ActivityTypeBuilder {
         self
     }
 
-    /// Set the is_active field (default: `true`)
-    pub fn is_active(mut self, value: bool) -> Self {
-        self.is_active = Some(value);
+    /// Set the status field (default: `ActivityTypeStatus::default()`)
+    pub fn status(mut self, value: ActivityTypeStatus) -> Self {
+        self.status = Some(value);
         self
     }
 
@@ -274,7 +282,7 @@ impl ActivityTypeBuilder {
             name,
             billing_rate: self.billing_rate.unwrap_or(Decimal::from(0)),
             costing_rate: self.costing_rate.unwrap_or(Decimal::from(0)),
-            is_active: self.is_active.unwrap_or(true),
+            status: self.status.unwrap_or_default(),
             metadata: AuditMetadata::default(),
         })
     }

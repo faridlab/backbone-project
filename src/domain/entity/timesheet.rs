@@ -68,7 +68,7 @@ pub struct Timesheet {
 impl Timesheet {
     /// Create a builder for Timesheet
     pub fn builder() -> TimesheetBuilder {
-        TimesheetBuilder::default()
+        <TimesheetBuilder as Default>::default()
     }
 
     /// Create a new Timesheet with required fields
@@ -349,7 +349,7 @@ impl TimesheetBuilder {
             project_id,
             employee_id: self.employee_id,
             currency: self.currency.unwrap_or("IDR".to_string()),
-            status: self.status.unwrap_or(TimesheetStatus::default()),
+            status: self.status.unwrap_or_default(),
             total_hours: self.total_hours.unwrap_or(Decimal::from(0)),
             total_billable_amount: self.total_billable_amount.unwrap_or(Decimal::from(0)),
             total_costing_amount: self.total_costing_amount.unwrap_or(Decimal::from(0)),

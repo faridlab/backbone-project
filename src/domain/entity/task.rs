@@ -67,7 +67,7 @@ pub struct Task {
 impl Task {
     /// Create a builder for Task
     pub fn builder() -> TaskBuilder {
-        TaskBuilder::default()
+        <TaskBuilder as Default>::default()
     }
 
     /// Create a new Task with required fields
@@ -338,7 +338,7 @@ impl TaskBuilder {
             parent_task_id: self.parent_task_id,
             subject,
             task_type: self.task_type,
-            status: self.status.unwrap_or(TaskStatus::default()),
+            status: self.status.unwrap_or_default(),
             expected_time: self.expected_time.unwrap_or(Decimal::from(0)),
             progress: self.progress.unwrap_or(Decimal::from(0)),
             metadata: AuditMetadata::default(),

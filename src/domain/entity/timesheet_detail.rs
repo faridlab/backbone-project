@@ -68,7 +68,7 @@ pub struct TimesheetDetail {
 impl TimesheetDetail {
     /// Create a builder for TimesheetDetail
     pub fn builder() -> TimesheetDetailBuilder {
-        TimesheetDetailBuilder::default()
+        <TimesheetDetailBuilder as Default>::default()
     }
 
     /// Create a new TimesheetDetail with required fields
