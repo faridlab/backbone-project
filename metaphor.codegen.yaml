@@ -35,6 +35,13 @@ user_owned:
   - "tests/project_billing_seam.rs"
   - "tests/project_golden_cases.rs"
   - "tests/query_service_port.rs"
+  # Shared test helpers (pool factory, capturing event sink, fake + real billing
+  # adapters) hand-written for the four test files above; consumed via `mod common;`.
+  - "tests/common/mod.rs"
+  # Module-template saga scaffolding (Example* symbols; no schema-derived content,
+  # not wired into src/application/mod.rs). Hand-written, so the generator must
+  # leave it alone.
+  - "src/application/workflows/mod.rs"
   - "scripts/**"
   # Hand-authored behavior (services + their HTTP surface). Examples:
   # - "src/application/service/onboarding_service.rs"

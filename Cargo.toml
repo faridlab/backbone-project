@@ -1,6 +1,6 @@
 [package]
 name = "backbone-project"
-version = "0.3.4"
+version = "0.3.5"
 edition = "2021"
 description = "Minimal Backbone Framework module skeleton"
 
@@ -11,16 +11,16 @@ path = "src/lib.rs"
 # -----------------------------------------------------------------------------
 # Backbone Framework crates
 #
-# Pulled directly from the public framework repository so this skeleton works
-# anywhere on disk without path fix-up. For reproducible builds, pin to a
-# specific tag or commit by replacing `branch = "main"` with `tag = "vX.Y.Z"`
-# or `rev = "<commit-sha>"`. Cargo dedupes the git fetch — the repo is only
-# cloned once even though four crates reference it.
+# Pulled directly from the public framework repository so this module builds
+# anywhere on disk without path fix-up. Pinned to tag v2.7.9 for reproducible
+# builds (floating branch pins resolve differently per machine and let the
+# lockfile carry two copies of the same crate). Cargo dedupes the git fetch —
+# the repo is only cloned once even though four crates reference it.
 # -----------------------------------------------------------------------------
-backbone-core = { git = "https://github.com/faridlab/backbone-framework", branch = "main", features = ["postgres"] }
-backbone-orm = { git = "https://github.com/faridlab/backbone-framework", branch = "main" }
-backbone-auth = { git = "https://github.com/faridlab/backbone-framework", branch = "main" }
-backbone-messaging = { git = "https://github.com/faridlab/backbone-framework", branch = "main" }
+backbone-core = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.9", features = ["postgres"] }
+backbone-orm = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.9" }
+backbone-auth = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.9" }
+backbone-messaging = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.9" }
 
 # Core async runtime and serialization
 tokio = { version = "1.0", features = ["full"] }

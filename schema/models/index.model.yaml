@@ -12,6 +12,14 @@
 module: project
 version: 2
 schema: project
+
+# ADR-0014 company fence: every project-module table is company-private and fenced
+# strict — a denormalized company_id column with a direct equality policy on
+# `app.company_id` (migrations 20260426220008_enable_company_rls and
+# 20260426220011_fence_child_tables_company_rls cover all seven tables:
+# activity_types, projects, project_templates, project_template_tasks, tasks,
+# timesheets, timesheet_details). No shared_blank or shared_tree entity exists here.
+company_fence: strict
 description: "project domain module"
 
 config:
