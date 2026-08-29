@@ -12,10 +12,6 @@ pub mod project_template_task_events;
 pub mod project_template_task_event_handlers;
 pub mod task_events;
 pub mod task_event_handlers;
-pub mod timesheet_events;
-pub mod timesheet_event_handlers;
-pub mod timesheet_detail_events;
-pub mod timesheet_detail_event_handlers;
 
 pub use activity_type_events::{ActivityTypeEvent, ActivityTypeEventPublisher, NoopActivityTypeEventPublisher};
 pub use activity_type_event_handlers::ActivityTypeEventHandler;
@@ -27,10 +23,6 @@ pub use project_template_task_events::{ProjectTemplateTaskEvent, ProjectTemplate
 pub use project_template_task_event_handlers::ProjectTemplateTaskEventHandler;
 pub use task_events::{TaskEvent, TaskEventPublisher, NoopTaskEventPublisher};
 pub use task_event_handlers::TaskEventHandler;
-pub use timesheet_events::{TimesheetEvent, TimesheetEventPublisher, NoopTimesheetEventPublisher};
-pub use timesheet_event_handlers::TimesheetEventHandler;
-pub use timesheet_detail_events::{TimesheetDetailEvent, TimesheetDetailEventPublisher, NoopTimesheetDetailEventPublisher};
-pub use timesheet_detail_event_handlers::TimesheetDetailEventHandler;
 
 // <<< CUSTOM
 // END CUSTOM

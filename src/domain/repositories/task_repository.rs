@@ -50,12 +50,13 @@ pub struct TaskFilter {
     pub subject: Option<String>,
     pub task_type: Option<String>,
     pub status: Option<TaskStatus>,
+    pub origin_sale_line_id: Option<Uuid>,
 }
 
 impl TaskFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.project_id.is_some() || self.parent_task_id.is_some() || self.subject.is_some() || self.task_type.is_some() || self.status.is_some()
+        self.company_id.is_some() || self.project_id.is_some() || self.parent_task_id.is_some() || self.subject.is_some() || self.task_type.is_some() || self.status.is_some() || self.origin_sale_line_id.is_some()
     }
 }
 

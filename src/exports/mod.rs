@@ -42,12 +42,6 @@ pub use events::*;
 /// - `TaskDto` - Data transfer object for Task
 /// - `TaskSummary` - Summary view of Task
 /// - `TaskId` - Type-safe ID wrapper
-/// - `TimesheetDto` - Data transfer object for Timesheet
-/// - `TimesheetSummary` - Summary view of Timesheet
-/// - `TimesheetId` - Type-safe ID wrapper
-/// - `TimesheetDetailDto` - Data transfer object for TimesheetDetail
-/// - `TimesheetDetailSummary` - Summary view of TimesheetDetail
-/// - `TimesheetDetailId` - Type-safe ID wrapper
 ///
 /// ## Public Events
 /// - `ActivityTypeCreatedEvent` - Published when ActivityType is created
@@ -65,10 +59,4 @@ pub use events::*;
 /// - `TaskCreatedEvent` - Published when Task is created
 /// - `TaskUpdatedEvent` - Published when Task is updated
 /// - `TaskDeletedEvent` - Published when Task is deleted
-/// - `TimesheetCreatedEvent` - Published when Timesheet is created
-/// - `TimesheetUpdatedEvent` - Published when Timesheet is updated
-/// - `TimesheetDeletedEvent` - Published when Timesheet is deleted
-/// - `TimesheetDetailCreatedEvent` - Published when TimesheetDetail is created
-/// - `TimesheetDetailUpdatedEvent` - Published when TimesheetDetail is updated
-/// - `TimesheetDetailDeletedEvent` - Published when TimesheetDetail is deleted
 pub struct ExportSummary;

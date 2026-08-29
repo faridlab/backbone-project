@@ -12,8 +12,6 @@ pub mod project_service;
 pub mod project_template_service;
 pub mod project_template_task_service;
 pub mod task_service;
-pub mod timesheet_service;
-pub mod timesheet_detail_service;
 
 // <<< CUSTOM
 pub mod project_events;
@@ -24,8 +22,10 @@ pub mod project_write_service;
 // are unchanged).
 pub mod project_lifecycle;
 pub mod project_task;
-pub mod project_timesheet;
+pub mod project_financials;
 pub mod project_billing;
+pub mod project_service_delivery;
+pub mod project_delete_guards;
 // END CUSTOM
 
 pub use activity_type_service::ActivityTypeService;
@@ -33,17 +33,16 @@ pub use project_service::ProjectService;
 pub use project_template_service::ProjectTemplateService;
 pub use project_template_task_service::ProjectTemplateTaskService;
 pub use task_service::TaskService;
-pub use timesheet_service::TimesheetService;
-pub use timesheet_detail_service::TimesheetDetailService;
 // <<< CUSTOM
 pub use project_events::{
-    LoggingSink, ProjectCompleted, ProjectEvent, ProjectEventSink, TimeLogged, TimesheetBilled,
-    TimesheetCancelled,
+    LoggingSink, ProjectCompleted, ProjectEvent, ProjectEventSink, TimesheetBilled,
+    TimesheetBillingReversed,
 };
 pub use project_ports::{
-    BillingPort, InvoiceAck, InvoiceFromTimesheet, InvoiceLineFromTimesheet, ProjectRejected,
+    BillingPort, InvoiceAck, InvoiceFromTimesheetPeriod, InvoiceLineFromTimesheet, ProjectRejected,
 };
 pub use project_write_service::{
-    BillOutcome, NewProject, NewTask, NewTimeLine, NewTimesheet, ProjectError, ProjectWriteService,
+    BillPeriodOutcome, NewProject, NewTask, ProjectError, ProjectFinancials, ProjectWriteService,
+    ServiceDeliveryLine, ServiceDeliveryLineOutcome, ServiceDeliveryRequest, ServiceTrackingRung,
 };
 // END CUSTOM

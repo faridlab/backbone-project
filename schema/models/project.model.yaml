@@ -3,16 +3,19 @@
 # Entity: Project
 # Description: A unit of delivered work for a customer. It READS its customer from
 # backbone-party (logical FK) and, optionally, its originating Sales Order from
-# backbone-selling. It owns Tasks + Timesheets. Cost/billing roll-up fields
-# (total_costing_amount / total_billable_amount / total_billed_amount) give margin
-# visibility WITHOUT posting to the GL — money only moves when a billable timesheet
-# is handed to backbone-billing (the one outbound seam). Posts NO GL itself.
+# backbone-selling. It owns Tasks. Cost/billing roll-up fields
+# (total_costing_amount / total_billable_amount / total_billed_amount) are DERIVED
+# reads over the converged analytic row (timesheet.timesheets, owned by the timesheet
+# module) — refreshed by an explicit verb, never live-computed on read — and give
+# margin visibility WITHOUT posting to the GL. Money only moves when an approved
+# (project, employee, year, month) slice is handed to backbone-billing through the
+# billing exit. Posts NO GL itself.
 # =============================================================================
 
 models:
   - name: Project
     collection: projects
-    description: "A customer delivery engagement with cost/billing roll-up (posts no GL)"
+    description: "A customer delivery engagement with derived cost/billing roll-ups (posts no GL)"
     fields:
       id:
         type: uuid
@@ -55,15 +58,15 @@ models:
       total_costing_amount:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
-        description: "Σ logged costing_amount (internal cost roll-up)"
+        description: "Σ converged-row costing_amount (internal cost roll-up; refreshed from the analytic row)"
       total_billable_amount:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
-        description: "Σ logged billable_amount not yet billed + billed (what could be charged)"
+        description: "Σ converged-row billable_amount (what could be charged; refreshed from the analytic row)"
       total_billed_amount:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
-        description: "Σ billable_amount actually handed to billing (invoiced)"
+        description: "Σ billable_amount actually handed to billing (rows carrying an invoice link)"
       notes:
         type: string?
         attributes: ["@max(2000)"]
@@ -79,6 +82,10 @@ models:
         fields: [customer_id]
       - type: index
         fields: [source_so_id]
+      - type: unique
+        fields: [company_id, source_so_id]
+        where: "source_so_id IS NOT NULL AND (metadata->>'deleted_at') IS NULL"
+        description: "One project per originating sales order — the per-order idempotency backstop for service-delivery minting (a repeated confirm returns the prior project)"
 
 enums:
   - name: ProjectType

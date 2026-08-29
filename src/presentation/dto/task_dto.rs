@@ -49,6 +49,8 @@ pub struct CreateTaskDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "task_type")]
     pub task_type: Option<String>,
     pub status: TaskStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "origin_sale_line_id")]
+    pub origin_sale_line_id: Option<Uuid>,
     #[serde(alias = "expected_time")]
     pub expected_time: Decimal,
     pub progress: Decimal,
@@ -82,6 +84,8 @@ pub struct UpdateTaskDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "task_type")]
     pub task_type: Option<String>,
     pub status: TaskStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "origin_sale_line_id")]
+    pub origin_sale_line_id: Option<Uuid>,
     #[serde(alias = "expected_time")]
     pub expected_time: Decimal,
     pub progress: Decimal,
@@ -117,6 +121,8 @@ pub struct PatchTaskDto {
     pub task_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<TaskStatus>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "origin_sale_line_id")]
+    pub origin_sale_line_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "expected_time")]
     pub expected_time: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -126,7 +132,7 @@ pub struct PatchTaskDto {
 impl PatchTaskDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.project_id.is_some() || self.parent_task_id.is_some() || self.subject.is_some() || self.task_type.is_some() || self.status.is_some() || self.expected_time.is_some() || self.progress.is_some()
+        self.company_id.is_some() || self.project_id.is_some() || self.parent_task_id.is_some() || self.subject.is_some() || self.task_type.is_some() || self.status.is_some() || self.origin_sale_line_id.is_some() || self.expected_time.is_some() || self.progress.is_some()
     }
 }
 
@@ -153,6 +159,7 @@ pub struct TaskResponseDto {
     pub subject: String,
     pub task_type: Option<String>,
     pub status: TaskStatus,
+    pub origin_sale_line_id: Option<Uuid>,
     pub expected_time: Decimal,
     pub progress: Decimal,
     pub metadata: AuditMetadata,
@@ -232,6 +239,7 @@ impl From<Task> for TaskResponseDto {
             subject: entity.subject,
             task_type: entity.task_type,
             status: entity.status,
+            origin_sale_line_id: entity.origin_sale_line_id,
             expected_time: entity.expected_time,
             progress: entity.progress,
             metadata: entity.metadata,
@@ -262,6 +270,7 @@ impl From<CreateTaskDto> for Task {
             subject: dto.subject,
             task_type: dto.task_type,
             status: dto.status,
+            origin_sale_line_id: dto.origin_sale_line_id,
             expected_time: dto.expected_time,
             progress: dto.progress,
             metadata: AuditMetadata::default(),
@@ -279,6 +288,7 @@ impl From<&Task> for TaskResponseDto {
             subject: entity.subject.clone(),
             task_type: entity.task_type.clone(),
             status: entity.status.clone(),
+            origin_sale_line_id: entity.origin_sale_line_id.clone(),
             expected_time: entity.expected_time.clone(),
             progress: entity.progress.clone(),
             metadata: entity.metadata.clone(),
@@ -300,6 +310,7 @@ impl backbone_core::ApplyUpdateDto<UpdateTaskDto> for Task {
         self.subject = dto.subject;
         self.task_type = dto.task_type;
         self.status = dto.status;
+        self.origin_sale_line_id = dto.origin_sale_line_id;
         self.expected_time = dto.expected_time;
         self.progress = dto.progress;
         Ok(self)

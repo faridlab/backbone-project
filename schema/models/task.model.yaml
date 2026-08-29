@@ -5,6 +5,13 @@
 # tree (`parent_task_id`) — NOT a Frappe nested-set, and NOT a full WBS/critical-path
 # (KEEP lightweight, per the pillar brief §4). A task has a status and an optional
 # effort estimate. Posts NO GL.
+#
+# Status is a HYBRID lifecycle field (ADR-0016 pattern 3): a forward compute with an
+# inverse. Forward: a non-latched task derives `working` iff live converged analytic
+# rows (timesheet.timesheets) reference it, else `open`. Inverse: a hand-set value
+# persists; setting a closed value (completed/cancelled) LATCHES — the compute never
+# re-derives over it, so new logged rows never silently reopen a done task; setting
+# open/working clears the latch and re-derives at once.
 # =============================================================================
 
 models:
@@ -39,7 +46,14 @@ models:
       status:
         type: TaskStatus
         attributes: ["@required", "@default(open)"]
-        description: "open → working → completed / cancelled"
+        lifecycle:
+          shape: hybrid
+          sticky: true
+        description: "Hybrid: derives `working` while live converged rows reference the task; a hand-set completed/cancelled latches until explicitly reopened (the sticky values are completed and cancelled)"
+      origin_sale_line_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Sales-order line this task was minted for (service delivery) # logical FK to selling.SalesOrderItem.id"
       expected_time:
         type: decimal
         attributes: ["@default(0)", "@precision(10,2)", "@non_negative"]
@@ -57,6 +71,10 @@ models:
         fields: [project_id, status]
       - type: index
         fields: [parent_task_id]
+      - type: unique
+        fields: [company_id, origin_sale_line_id]
+        where: "origin_sale_line_id IS NOT NULL AND (metadata->>'deleted_at') IS NULL"
+        description: "One task per sales-order line — the per-line idempotency backstop for service-delivery minting (a repeated confirm returns the prior task)"
 
 enums:
   - name: TaskStatus
@@ -66,7 +84,7 @@ enums:
         description: "Not started"
         default: true
       - name: working
-        description: "In progress"
+        description: "In progress (derived while live converged rows reference the task)"
       - name: completed
         description: "Done"
       - name: cancelled

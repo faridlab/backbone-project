@@ -14,16 +14,12 @@ mod project_seeder;
 mod project_template_seeder;
 mod project_template_task_seeder;
 mod task_seeder;
-mod timesheet_seeder;
-mod timesheet_detail_seeder;
 
 pub use activity_type_seeder::SeedActivityTypeSeeder;
 pub use project_seeder::SeedProjectSeeder;
 pub use project_template_seeder::SeedProjectTemplateSeeder;
 pub use project_template_task_seeder::SeedProjectTemplateTaskSeeder;
 pub use task_seeder::SeedTaskSeeder;
-pub use timesheet_seeder::SeedTimesheetSeeder;
-pub use timesheet_detail_seeder::SeedTimesheetDetailSeeder;
 
 // ============================================================================
 // SEEDER TRAIT

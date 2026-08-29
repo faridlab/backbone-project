@@ -90,7 +90,7 @@ async fn qsp1_project_read_port() {
 }
 
 /// QSP-2 — a second entity (ActivityType) reads through the same port, proving the impl covers
-/// all seven services, not just Project. Also checks the rate fields round-trip exactly.
+/// all five services, not just Project. Also checks the rate fields round-trip exactly.
 #[tokio::test]
 async fn qsp2_activity_type_read_port() {
     let pool = pool().await;

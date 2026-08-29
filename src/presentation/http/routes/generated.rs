@@ -14,8 +14,6 @@ use super::{
     project_template_handler::create_project_template_routes,
     project_template_task_handler::create_project_template_task_routes,
     task_handler::create_task_routes,
-    timesheet_handler::create_timesheet_routes,
-    timesheet_detail_handler::create_timesheet_detail_routes,
 };
 
 use crate::application::service::{
@@ -24,8 +22,6 @@ use crate::application::service::{
     ProjectTemplateService,
     ProjectTemplateTaskService,
     TaskService,
-    TimesheetService,
-    TimesheetDetailService,
 };
 
 /// Services collection for all CRUD endpoints
@@ -35,8 +31,6 @@ pub struct HttpServices {
     pub project_template: Arc<ProjectTemplateService>,
     pub project_template_task: Arc<ProjectTemplateTaskService>,
     pub task: Arc<TaskService>,
-    pub timesheet: Arc<TimesheetService>,
-    pub timesheet_detail: Arc<TimesheetDetailService>,
 }
 
 /// Configure all HTTP routes for this module using Axum and BackboneCrudHandler.
@@ -66,10 +60,6 @@ pub fn configure_routes(services: HttpServices) -> Router {
         .merge(create_project_template_task_routes(services.project_template_task))
         // Task routes (12 Backbone endpoints)
         .merge(create_task_routes(services.task))
-        // Timesheet routes (12 Backbone endpoints)
-        .merge(create_timesheet_routes(services.timesheet))
-        // TimesheetDetail routes (12 Backbone endpoints)
-        .merge(create_timesheet_detail_routes(services.timesheet_detail))
 }
 
 /// Create an individual entity's routes (for modular configuration)
@@ -94,14 +84,6 @@ pub mod individual {
 
     pub fn task_routes(service: Arc<TaskService>) -> Router {
         create_task_routes(service)
-    }
-
-    pub fn timesheet_routes(service: Arc<TimesheetService>) -> Router {
-        create_timesheet_routes(service)
-    }
-
-    pub fn timesheet_detail_routes(service: Arc<TimesheetDetailService>) -> Router {
-        create_timesheet_detail_routes(service)
     }
 
 }

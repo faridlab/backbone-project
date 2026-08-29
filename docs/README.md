@@ -1,9 +1,18 @@
 # backbone-project — Documentation
 
 The documentation set for **`backbone-project`**, the Backbone Framework **project-delivery** domain
-module (v0.1.3). It owns `Project`s, their `Task`s, and `Timesheet`s of logged effort; it gives margin
-visibility through cost/billing roll-up and **posts no GL** — money moves only when a billable timesheet
-crosses its one outbound seam into `backbone-billing`.
+module (v0.1.3). It owns `Project`s, their `Task`s, and `Task` templates; it gives margin
+visibility through derived cost/billing roll-ups and **posts no GL** — money moves only when an
+approved timesheet period crosses its one outbound seam into `backbone-billing`.
+
+> **Posture change — converged analytic row.** This module no longer owns a timesheet table.
+> Logged effort lives in ONE place: the timesheet module's `timesheet.timesheets` row, and this
+> module holds only derived reads over it (the financial refresh verb), the period billing exit,
+> the per-rung service-delivery mint from confirmed sales orders, guarded deletes, and hybrid task
+> statuses. See [`profitability-sections.md`](profitability-sections.md) for how the P&L sections
+> assemble without double-counting. Handbook pages written before the convergence still narrate the
+> retired local timesheet model in places — where they disagree with the schema YAML (the source of
+> truth), the schema wins and the page is due a refresh.
 
 Every handbook page names **one reader** and **one mode** (Diátaxis) at its top. Find your reader,
 follow the path.

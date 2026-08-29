@@ -18,8 +18,10 @@ user_owned:
   # block; the shared vocabulary (input structs, outcome, error) stays in project_write_service.rs.
   - "src/application/service/project_lifecycle.rs"
   - "src/application/service/project_task.rs"
-  - "src/application/service/project_timesheet.rs"
+  - "src/application/service/project_financials.rs"
   - "src/application/service/project_billing.rs"
+  - "src/application/service/project_service_delivery.rs"
+  - "src/application/service/project_delete_guards.rs"
   # Own the hand-written project SQL (the delivery writes, the status-gated roll-up + its reversal, the
   # billing seam's at-most-once transition gates) that the write service orchestrates. Declared here —
   # not renamed with a `_custom` suffix — so the generator skips them wholesale; this declaration is
@@ -29,12 +31,15 @@ user_owned:
   - "src/infrastructure/persistence/project_template_repository.rs"
   - "src/infrastructure/persistence/project_template_task_repository.rs"
   - "src/infrastructure/persistence/task_repository.rs"
-  - "src/infrastructure/persistence/timesheet_detail_repository.rs"
-  - "src/infrastructure/persistence/timesheet_repository.rs"
+  # The cross-schema read/write surface over the CONVERGED analytic row (timesheet module's
+  # tables): approval gate, billable period lines, the invoice stamp/clear, financial sums,
+  # live-row existence probes for the delete guards and the hybrid task-status derivation.
+  - "src/infrastructure/persistence/converged_timesheet_repository.rs"
   - "tests/integrity_probes.rs"
   - "tests/project_billing_seam.rs"
   - "tests/project_golden_cases.rs"
   - "tests/query_service_port.rs"
+  - "tests/convergence_probes.rs"
   # Shared test helpers (pool factory, capturing event sink, fake + real billing
   # adapters) hand-written for the four test files above; consumed via `mod common;`.
   - "tests/common/mod.rs"
@@ -51,6 +56,16 @@ user_owned:
   - "tests/features/**"
   # - "tests/*_golden_cases.rs"
   # - "tests/integrity_probes.rs"
+
+  # The model-retirement migration: drops this module's own timesheet tables, audit
+  # functions, and status enum (the converged analytic row lives in the timesheet module)
+  # and adds the origin-key uniques backing the confirm-mint idempotency — hand-owned
+  # because a drop-and-retire ALTER is not schema-derivable.
+  - "migrations/20260829120000_retire_local_timesheet_model.up.sql"
+  - "migrations/20260829120000_retire_local_timesheet_model.down.sql"
+  # Enforcement declarations the schema tree does not derive: the delete guards over
+  # converged rows and the origin-key uniqueness backstops.
+  - "schema/hooks/convergence_guards.hook.yaml"
 
   # Hand-authored module documentation.
   - "docs/**"

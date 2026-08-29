@@ -5,18 +5,22 @@
 //! `DomainPolicy` enforces pure business invariants (state-based rules).
 //! Identity-based rules live in `backbone_auth::ResourcePolicy`.
 
-use backbone_core::PermitAllPolicy;
+use async_trait::async_trait;
+use backbone_core::{DomainPolicy, PolicyDecision};
 use crate::domain::entity::Project;
 
-/// Domain policy for Project — permits all operations (no business invariants).
-///
-/// NOTE: `DomainPolicy` is advisory only — it is NOT invoked by the generic
-/// CRUD pipeline. `GenericCrudService` enforces invariants via a different
-/// trait, `ServiceLifecycle` (`before_create` / `before_update`). So implementing
-/// a real `DomainPolicy` here is not yet wired to runtime. For actual per-write
-/// enforcement, implement `backbone_core::ServiceLifecycle<Project>` on a custom
-/// service. `PermitAllPolicy` is the safe default until then.
-pub type ProjectDomainPolicy = PermitAllPolicy<Project>;
+/// Domain policy for Project — enforces business invariants.
+pub struct ProjectDomainPolicy;
 
-// <<< CUSTOM
-// END CUSTOM
+#[async_trait]
+impl DomainPolicy<Project> for ProjectDomainPolicy {
+    // <<< CUSTOM
+    // Add entity-specific invariant checks here.
+    // Example:
+    // async fn can_delete(&self, entity: &Project) -> PolicyDecision {
+    //     if entity.is_locked {
+    //         Err("locked project cannot be deleted".into())
+    //     } else { Ok(true) }
+    // }
+    // END CUSTOM
+}

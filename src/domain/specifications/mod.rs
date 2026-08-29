@@ -11,8 +11,6 @@ pub mod project_specification;
 pub mod project_template_specification;
 pub mod project_template_task_specification;
 pub mod task_specification;
-pub mod timesheet_specification;
-pub mod timesheet_detail_specification;
 
 // <<< CUSTOM
 // END CUSTOM

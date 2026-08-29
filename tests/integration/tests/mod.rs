@@ -11,8 +11,6 @@ pub mod project_api_test;
 pub mod project_template_api_test;
 pub mod project_template_task_api_test;
 pub mod task_api_test;
-pub mod timesheet_api_test;
-pub mod timesheet_detail_api_test;
 
 // Re-exports for convenience
 pub use crud_test_base::*;
@@ -21,5 +19,3 @@ pub use project_api_test::*;
 pub use project_template_api_test::*;
 pub use project_template_task_api_test::*;
 pub use task_api_test::*;
-pub use timesheet_api_test::*;
-pub use timesheet_detail_api_test::*;

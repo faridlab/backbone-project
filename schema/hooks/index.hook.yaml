@@ -9,7 +9,7 @@ version: 2
 
 # Import all hook files.
 imports:
-  - example.hook.yaml
+  - convergence_guards.hook.yaml
 
 # =============================================================================
 # Module-level configuration

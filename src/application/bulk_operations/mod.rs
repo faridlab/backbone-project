@@ -10,16 +10,12 @@ pub mod project_bulk;
 pub mod project_template_bulk;
 pub mod project_template_task_bulk;
 pub mod task_bulk;
-pub mod timesheet_bulk;
-pub mod timesheet_detail_bulk;
 
 pub use activity_type_bulk::ActivityTypeBulkService;
 pub use project_bulk::ProjectBulkService;
 pub use project_template_bulk::ProjectTemplateBulkService;
 pub use project_template_task_bulk::ProjectTemplateTaskBulkService;
 pub use task_bulk::TaskBulkService;
-pub use timesheet_bulk::TimesheetBulkService;
-pub use timesheet_detail_bulk::TimesheetDetailBulkService;
 
 // <<< CUSTOM
 // END CUSTOM

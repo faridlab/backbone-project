@@ -11,8 +11,6 @@ pub mod project_repository;
 pub mod project_template_repository;
 pub mod project_template_task_repository;
 pub mod task_repository;
-pub mod timesheet_repository;
-pub mod timesheet_detail_repository;
 
 // Re-exports
 pub use activity_type_repository::{
@@ -44,16 +42,4 @@ pub use task_repository::{
     TaskPaginationParams,
     TaskPaginatedResult,
     TaskFilter,
-};
-pub use timesheet_repository::{
-    TimesheetRepository,
-    TimesheetPaginationParams,
-    TimesheetPaginatedResult,
-    TimesheetFilter,
-};
-pub use timesheet_detail_repository::{
-    TimesheetDetailRepository,
-    TimesheetDetailPaginationParams,
-    TimesheetDetailPaginatedResult,
-    TimesheetDetailFilter,
 };

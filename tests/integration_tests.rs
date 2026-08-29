@@ -79,31 +79,3 @@ async fn test_task_api() {
         panic!("{} tests failed", failed.len());
     }
 }
-
-#[tokio::test]
-async fn test_timesheet_api() {
-    let mut test = TimesheetApiTest::new();
-    let results = test.run_all().await;
-
-    let failed: Vec<_> = results.iter().filter(|r| !r.success).collect();
-    if !failed.is_empty() {
-        for f in &failed {
-            eprintln!("FAILED: {} - {}", f.test_name, f.details);
-        }
-        panic!("{} tests failed", failed.len());
-    }
-}
-
-#[tokio::test]
-async fn test_timesheet_detail_api() {
-    let mut test = TimesheetDetailApiTest::new();
-    let results = test.run_all().await;
-
-    let failed: Vec<_> = results.iter().filter(|r| !r.success).collect();
-    if !failed.is_empty() {
-        for f in &failed {
-            eprintln!("FAILED: {} - {}", f.test_name, f.details);
-        }
-        panic!("{} tests failed", failed.len());
-    }
-}

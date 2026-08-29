@@ -10,32 +10,31 @@ pub mod project_handler;
 pub mod project_template_handler;
 pub mod project_template_task_handler;
 pub mod task_handler;
-pub mod timesheet_handler;
-pub mod timesheet_detail_handler;
 
 // <<< CUSTOM
 /// Guarded route composition for production.
 ///
-/// The five aggregate-root / master entities get full generic CRUD. The two aggregate-leaf
-/// children — **TimesheetDetail** and **ProjectTemplateTask** — are mounted **READ-ONLY**:
-/// their writes MUST go through `ProjectWriteService`, because generic child CRUD would
-/// bypass the roll-up invariants (`ProjectWriteService::log_time` inserts a timesheet with
-/// its detail lines in one tx and recomputes `total_hours` / billable / costing from the
-/// lines; mutating a line directly would desync `total_hours = Σ line.hours`).
+/// This module owns NO analytic-row tables anymore — logged effort lives in the timesheet
+/// module's `timesheet.timesheets` (the converged row), reached only through
+/// `ProjectWriteService` verbs (the billing exit, the derived financial refresh, the hybrid
+/// task-status derivation). What mounts here is this module's own tables:
+///
+/// - The aggregate-leaf child **ProjectTemplateTask** is mounted **READ-ONLY**: its writes go
+///   through template instantiation, so generic child CRUD could bypass the fork shape.
+/// - Tasks stay full generic CRUD for reads/masters, but the validated status writes
+///   (the hybrid latch/derive) and guarded deletes go through `module.write_service`.
 ///
 /// Prefer this over `ProjectModule::all_crud_routes()`, which mounts full unvalidated CRUD
-/// on every entity — including the children — and is reserved for trusted / admin / seeding.
+/// on every entity and is reserved for trusted / admin / seeding.
 pub fn create_guarded_project_routes(module: &crate::ProjectModule) -> axum::Router {
     axum::Router::new()
-        // Aggregate-leaf children: READ-ONLY (writes via ProjectWriteService).
-        .merge(create_timesheet_detail_read_routes(module.timesheet_detail_service.clone()))
+        // Aggregate-leaf child: READ-ONLY (writes via template instantiation).
         .merge(create_project_template_task_read_routes(module.project_template_task_service.clone()))
         // Aggregate roots + masters: full generic CRUD.
         .merge(create_activity_type_routes(module.activity_type_service.clone()))
         .merge(create_project_routes(module.project_service.clone()))
         .merge(create_project_template_routes(module.project_template_service.clone()))
         .merge(create_task_routes(module.task_service.clone()))
-        .merge(create_timesheet_routes(module.timesheet_service.clone()))
 }
 // END CUSTOM
 
@@ -45,7 +44,5 @@ pub use project_handler::{create_project_routes, create_project_read_routes, cre
 pub use project_template_handler::{create_project_template_routes, create_project_template_read_routes, create_project_template_write_routes};
 pub use project_template_task_handler::{create_project_template_task_routes, create_project_template_task_read_routes, create_project_template_task_write_routes};
 pub use task_handler::{create_task_routes, create_task_read_routes, create_task_write_routes};
-pub use timesheet_handler::{create_timesheet_routes, create_timesheet_read_routes, create_timesheet_write_routes};
-pub use timesheet_detail_handler::{create_timesheet_detail_routes, create_timesheet_detail_read_routes, create_timesheet_detail_write_routes};
 // <<< CUSTOM
 // END CUSTOM

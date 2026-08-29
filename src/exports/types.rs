@@ -301,6 +301,7 @@ pub struct TaskDto {
     pub subject: String,
     pub task_type: Option<String>,
     pub status: TaskStatus,
+    pub origin_sale_line_id: Option<Uuid>,
     pub expected_time: Decimal,
     pub progress: Decimal,
     pub metadata: serde_json::Value,
@@ -317,133 +318,6 @@ pub struct TaskSummary {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskRef {
     pub id: TaskId,
-}
-
-// ============================================================================
-// TIMESHEET TYPES
-// ============================================================================
-
-/// Type-safe ID for Timesheet
-///
-/// Use this instead of raw Uuid for type safety across modules.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct TimesheetId(pub Uuid);
-
-impl TimesheetId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
-}
-
-impl From<Uuid> for TimesheetId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
-}
-
-impl From<TimesheetId> for Uuid {
-    fn from(id: TimesheetId) -> Self {
-        id.0
-    }
-}
-
-/// Data transfer object for Timesheet
-///
-/// This is the public representation of Timesheet for other modules.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetDto {
-    pub id: TimesheetId,
-    pub company_id: Uuid,
-    pub project_id: Uuid,
-    pub employee_id: Option<Uuid>,
-    pub currency: String,
-    pub status: TimesheetStatus,
-    pub total_hours: Decimal,
-    pub total_billable_amount: Decimal,
-    pub total_costing_amount: Decimal,
-    pub invoice_id: Option<Uuid>,
-    pub metadata: serde_json::Value,
-}
-
-/// Summary view of Timesheet for list displays
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetSummary {
-    pub id: TimesheetId,
-    pub status: TimesheetStatus,
-}
-
-/// Reference to Timesheet for foreign key relationships
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetRef {
-    pub id: TimesheetId,
-}
-
-// ============================================================================
-// TIMESHEETDETAIL TYPES
-// ============================================================================
-
-/// Type-safe ID for TimesheetDetail
-///
-/// Use this instead of raw Uuid for type safety across modules.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct TimesheetDetailId(pub Uuid);
-
-impl TimesheetDetailId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
-}
-
-impl From<Uuid> for TimesheetDetailId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
-}
-
-impl From<TimesheetDetailId> for Uuid {
-    fn from(id: TimesheetDetailId) -> Self {
-        id.0
-    }
-}
-
-/// Data transfer object for TimesheetDetail
-///
-/// This is the public representation of TimesheetDetail for other modules.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetDetailDto {
-    pub id: TimesheetDetailId,
-    pub company_id: Uuid,
-    pub timesheet_id: Uuid,
-    pub activity_type_id: Option<Uuid>,
-    pub task_id: Option<Uuid>,
-    pub description: Option<String>,
-    pub hours: Decimal,
-    pub billing_rate: Decimal,
-    pub costing_rate: Decimal,
-    pub is_billable: bool,
-    pub billable_amount: Decimal,
-    pub costing_amount: Decimal,
-    pub metadata: serde_json::Value,
-}
-
-/// Summary view of TimesheetDetail for list displays
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetDetailSummary {
-    pub id: TimesheetDetailId,
-}
-
-/// Reference to TimesheetDetail for foreign key relationships
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetDetailRef {
-    pub id: TimesheetDetailId,
 }
 
 // ============================================================================

@@ -9,22 +9,24 @@ mod project_repository;
 mod project_template_repository;
 mod project_template_task_repository;
 mod task_repository;
-mod timesheet_repository;
-mod timesheet_detail_repository;
 
 // Custom persistence modules
 // <<< CUSTOM
-// The hand-written project SQL's parameter/projection types (see the seven `*_repository` modules, all
-// declared `user_owned` in metaphor.codegen.yaml).
-pub use activity_type_repository::ActivityRatesRow;
+// The hand-written project SQL's parameter/projection types (see the `*_repository` modules, all
+// declared `user_owned` in metaphor.codegen.yaml). `converged_timesheet_repository` is declared
+// HERE (inside the CUSTOM block) because the module declaration list above is regenerated —
+// the repo itself is user-owned and never regenerated.
+pub mod converged_timesheet_repository;
+pub use converged_timesheet_repository::{
+    ClearInvoiceRow, ConvergedBillableLine, ConvergedTimesheetRepository, ProjectFinancialSums,
+    StampInvoiceRow,
+};
 pub use project_repository::{
-    NewProjectRow, ProjectCompletionRow, ProjectScopeRow, ProjectTimeLogRow,
+    NewProjectRow, ProjectCompletionRow, ProjectFinancialsRow, ProjectScopeRow,
 };
 pub use project_template_repository::TemplateRow;
 pub use project_template_task_repository::TemplateTaskRow;
-pub use task_repository::NewTaskRow;
-pub use timesheet_detail_repository::{BillableLineRow, NewTimesheetDetailRow};
-pub use timesheet_repository::{NewTimesheetRow, TimesheetBillingRow, TimesheetCancelRow};
+pub use task_repository::{NewTaskRow, TaskScopeRow};
 // END CUSTOM
 
 // Re-exports
@@ -33,8 +35,6 @@ pub use project_repository::ProjectRepository;
 pub use project_template_repository::ProjectTemplateRepository;
 pub use project_template_task_repository::ProjectTemplateTaskRepository;
 pub use task_repository::TaskRepository;
-pub use timesheet_repository::TimesheetRepository;
-pub use timesheet_detail_repository::TimesheetDetailRepository;
 
 // Re-export backbone-orm types
 pub use backbone_orm::repository::{

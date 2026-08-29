@@ -16,9 +16,12 @@ schema: project
 # ADR-0014 company fence: every project-module table is company-private and fenced
 # strict — a denormalized company_id column with a direct equality policy on
 # `app.company_id` (migrations 20260426220008_enable_company_rls and
-# 20260426220011_fence_child_tables_company_rls cover all seven tables:
-# activity_types, projects, project_templates, project_template_tasks, tasks,
-# timesheets, timesheet_details). No shared_blank or shared_tree entity exists here.
+# 20260426220011_fence_child_tables_company_rls cover all five tables:
+# activity_types, projects, project_templates, project_template_tasks, tasks).
+# The module's own timesheets/timesheet_details were retired — logged effort is
+# the converged analytic row in the timesheet module's schema, which brings its
+# own strict fence; this module reads it cross-schema through company-scoped SQL.
+# No shared_blank or shared_tree entity exists here.
 company_fence: strict
 description: "project domain module"
 
@@ -80,5 +83,4 @@ imports:
   - activity_type.model.yaml
   - project.model.yaml
   - task.model.yaml
-  - timesheet.model.yaml
   - project_template.model.yaml

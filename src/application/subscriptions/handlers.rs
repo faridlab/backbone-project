@@ -9,8 +9,6 @@ use crate::domain::event::ProjectEvent;
 use crate::domain::event::ProjectTemplateEvent;
 use crate::domain::event::ProjectTemplateTaskEvent;
 use crate::domain::event::TaskEvent;
-use crate::domain::event::TimesheetEvent;
-use crate::domain::event::TimesheetDetailEvent;
 
 /// Subscriber for ActivityType events.
 ///
@@ -36,16 +34,6 @@ pub type ProjectTemplateTaskEventSubscriber = GenericEventSubscriber<ProjectTemp
 ///
 /// Register handlers via `GenericEventSubscriber::new(topics, handlers)`.
 pub type TaskEventSubscriber = GenericEventSubscriber<TaskEvent>;
-
-/// Subscriber for Timesheet events.
-///
-/// Register handlers via `GenericEventSubscriber::new(topics, handlers)`.
-pub type TimesheetEventSubscriber = GenericEventSubscriber<TimesheetEvent>;
-
-/// Subscriber for TimesheetDetail events.
-///
-/// Register handlers via `GenericEventSubscriber::new(topics, handlers)`.
-pub type TimesheetDetailEventSubscriber = GenericEventSubscriber<TimesheetDetailEvent>;
 
 // <<< CUSTOM
 // END CUSTOM

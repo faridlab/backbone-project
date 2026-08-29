@@ -17,8 +17,6 @@ use backbone_project::seeders::SeedProjectSeeder;
 use backbone_project::seeders::SeedProjectTemplateSeeder;
 use backbone_project::seeders::SeedProjectTemplateTaskSeeder;
 use backbone_project::seeders::SeedTaskSeeder;
-use backbone_project::seeders::SeedTimesheetSeeder;
-use backbone_project::seeders::SeedTimesheetDetailSeeder;
 use backbone_project::seeders::Seeder;
 
 #[tokio::main]
@@ -52,8 +50,6 @@ async fn main() -> Result<()> {
     seeders.push(Box::new(SeedProjectTemplateSeeder::new()));
     seeders.push(Box::new(SeedProjectTemplateTaskSeeder::new()));
     seeders.push(Box::new(SeedTaskSeeder::new()));
-    seeders.push(Box::new(SeedTimesheetSeeder::new()));
-    seeders.push(Box::new(SeedTimesheetDetailSeeder::new()));
 
     // Sort by order
     seeders.sort_by_key(|s| s.order());

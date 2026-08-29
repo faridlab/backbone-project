@@ -10,8 +10,6 @@ pub mod project_dto;
 pub mod project_template_dto;
 pub mod project_template_task_dto;
 pub mod task_dto;
-pub mod timesheet_dto;
-pub mod timesheet_detail_dto;
 
 // Re-exports
 pub use activity_type_dto::{
@@ -53,22 +51,6 @@ pub use task_dto::{
     TaskResponseDto,
     TaskListResponseDto,
     TaskSummaryDto,
-};
-pub use timesheet_dto::{
-    CreateTimesheetDto,
-    UpdateTimesheetDto,
-    PatchTimesheetDto,
-    TimesheetResponseDto,
-    TimesheetListResponseDto,
-    TimesheetSummaryDto,
-};
-pub use timesheet_detail_dto::{
-    CreateTimesheetDetailDto,
-    UpdateTimesheetDetailDto,
-    PatchTimesheetDetailDto,
-    TimesheetDetailResponseDto,
-    TimesheetDetailListResponseDto,
-    TimesheetDetailSummaryDto,
 };
 
 // Common pagination types

@@ -19,6 +19,11 @@ pub fn project_validator() -> ProjectValidator {
         .rule(RequiredString::new("currency", |e: &Project| &e.currency))
         .rule(OptionalNotBlank::new("notes", |e: &Project| e.notes.as_deref()))
     // <<< CUSTOM RULES
+    // hook rule: G-PRJ-1 (implement in CUSTOM zone)
+    // hook rule: G-PRJ-2 (implement in CUSTOM zone)
+    // hook rule: G-PRJ-3 (implement in CUSTOM zone)
+    // hook rule: G-PRJ-4 (implement in CUSTOM zone)
+    // hook rule: G-PRJ-5 (implement in CUSTOM zone)
     // END CUSTOM RULES
 }
 

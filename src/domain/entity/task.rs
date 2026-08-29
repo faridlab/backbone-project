@@ -57,6 +57,7 @@ pub struct Task {
     pub subject: String,
     pub task_type: Option<String>,
     pub status: TaskStatus,
+    pub origin_sale_line_id: Option<Uuid>,
     pub expected_time: Decimal,
     pub progress: Decimal,
     #[serde(default)]
@@ -80,6 +81,7 @@ impl Task {
             subject,
             task_type: None,
             status,
+            origin_sale_line_id: None,
             expected_time,
             progress,
             metadata: AuditMetadata::default(),
@@ -158,6 +160,12 @@ impl Task {
         self
     }
 
+    /// Set the origin_sale_line_id field (chainable)
+    pub fn with_origin_sale_line_id(mut self, value: Uuid) -> Self {
+        self.origin_sale_line_id = Some(value);
+        self
+    }
+
     // ==========================================================
     // Partial Update
     // ==========================================================
@@ -183,6 +191,9 @@ impl Task {
                 }
                 "status" => {
                     if let Ok(v) = serde_json::from_value(value) { self.status = v; }
+                }
+                "origin_sale_line_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.origin_sale_line_id = v; }
                 }
                 "expected_time" => {
                     if let Ok(v) = serde_json::from_value(value) { self.expected_time = v; }
@@ -247,6 +258,7 @@ impl backbone_orm::EntityRepoMeta for Task {
         m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("project_id".to_string(), "uuid".to_string());
         m.insert("parent_task_id".to_string(), "uuid".to_string());
+        m.insert("origin_sale_line_id".to_string(), "uuid".to_string());
         m.insert("status".to_string(), "task_status".to_string());
         m
     }
@@ -270,6 +282,7 @@ pub struct TaskBuilder {
     subject: Option<String>,
     task_type: Option<String>,
     status: Option<TaskStatus>,
+    origin_sale_line_id: Option<Uuid>,
     expected_time: Option<Decimal>,
     progress: Option<Decimal>,
 }
@@ -311,6 +324,12 @@ impl TaskBuilder {
         self
     }
 
+    /// Set the origin_sale_line_id field (optional)
+    pub fn origin_sale_line_id(mut self, value: Uuid) -> Self {
+        self.origin_sale_line_id = Some(value);
+        self
+    }
+
     /// Set the expected_time field (default: `Decimal::from(0)`)
     pub fn expected_time(mut self, value: Decimal) -> Self {
         self.expected_time = Some(value);
@@ -339,6 +358,7 @@ impl TaskBuilder {
             subject,
             task_type: self.task_type,
             status: self.status.unwrap_or_default(),
+            origin_sale_line_id: self.origin_sale_line_id,
             expected_time: self.expected_time.unwrap_or(Decimal::from(0)),
             progress: self.progress.unwrap_or(Decimal::from(0)),
             metadata: AuditMetadata::default(),

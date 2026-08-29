@@ -7,16 +7,12 @@ pub mod project_auth;
 pub mod project_template_auth;
 pub mod project_template_task_auth;
 pub mod task_auth;
-pub mod timesheet_auth;
-pub mod timesheet_detail_auth;
 
 pub use activity_type_auth::{ActivityTypePolicy, ActivityTypeGuard, ActivityTypeServiceGuard};
 pub use project_auth::{ProjectPolicy, ProjectGuard, ProjectServiceGuard};
 pub use project_template_auth::{ProjectTemplatePolicy, ProjectTemplateGuard, ProjectTemplateServiceGuard};
 pub use project_template_task_auth::{ProjectTemplateTaskPolicy, ProjectTemplateTaskGuard, ProjectTemplateTaskServiceGuard};
 pub use task_auth::{TaskPolicy, TaskGuard, TaskServiceGuard};
-pub use timesheet_auth::{TimesheetPolicy, TimesheetGuard, TimesheetServiceGuard};
-pub use timesheet_detail_auth::{TimesheetDetailPolicy, TimesheetDetailGuard, TimesheetDetailServiceGuard};
 
 // <<< CUSTOM
 // END CUSTOM

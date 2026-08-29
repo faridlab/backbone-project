@@ -37,8 +37,9 @@ pub use application::service::ProjectService;
 pub use application::service::ProjectTemplateService;
 pub use application::service::ProjectTemplateTaskService;
 pub use application::service::TaskService;
-pub use application::service::TimesheetService;
-pub use application::service::TimesheetDetailService;
+
+// Re-exports - Validation
+pub use application::validator::{ValidationError, ValidationResult};
 
 use std::sync::Arc;
 use axum::Router;
@@ -62,13 +63,15 @@ pub struct ProjectModule {
     pub(crate) project_template_service: Arc<ProjectTemplateService>,
     pub(crate) project_template_task_service: Arc<ProjectTemplateTaskService>,
     pub(crate) task_service: Arc<TaskService>,
-    pub(crate) timesheet_service: Arc<TimesheetService>,
-    pub(crate) timesheet_detail_service: Arc<TimesheetDetailService>,
     // <<< CUSTOM FIELDS
     /// Inbound read-port for sibling modules (`use project::exports::ProjectQueryService`).
     /// `pub` (not `pub(crate)`) so siblings can obtain the trait object — clone the Arc
     /// to hold `Arc<dyn ProjectQueryService>`. Lives in the CUSTOM FIELDS block (regen-safe).
     pub query_service: std::sync::Arc<dyn crate::exports::ProjectQueryService>,
+    /// The validated write surface (project/task lifecycle, hybrid task status, the billing
+    /// exit, the confirm-mint, guarded deletes, the derived financial reads). Composing hosts
+    /// drive this; the generic-CRUD services above remain the trusted/admin escape hatch.
+    pub write_service: std::sync::Arc<crate::application::service::ProjectWriteService>,
     // END CUSTOM
 }
 
@@ -90,8 +93,6 @@ impl ProjectModule {
             create_project_template_routes,
             create_project_template_task_routes,
             create_task_routes,
-            create_timesheet_routes,
-            create_timesheet_detail_routes,
         };
 
         Router::new()
@@ -100,8 +101,6 @@ impl ProjectModule {
             .merge(create_project_template_routes(self.project_template_service.clone()))
             .merge(create_project_template_task_routes(self.project_template_task_service.clone()))
             .merge(create_task_routes(self.task_service.clone()))
-            .merge(create_timesheet_routes(self.timesheet_service.clone()))
-            .merge(create_timesheet_detail_routes(self.timesheet_detail_service.clone()))
     }
 
     /// Deprecated alias for [`Self::all_crud_routes`]. `routes()` reads like
@@ -126,8 +125,6 @@ impl ProjectModule {
             create_project_template_read_routes,
             create_project_template_task_read_routes,
             create_task_read_routes,
-            create_timesheet_read_routes,
-            create_timesheet_detail_read_routes,
         };
 
         Router::new()
@@ -136,8 +133,6 @@ impl ProjectModule {
             .merge(create_project_template_read_routes(self.project_template_service.clone()))
             .merge(create_project_template_task_read_routes(self.project_template_task_service.clone()))
             .merge(create_task_read_routes(self.task_service.clone()))
-            .merge(create_timesheet_read_routes(self.timesheet_service.clone()))
-            .merge(create_timesheet_detail_read_routes(self.timesheet_detail_service.clone()))
     }
 
     // <<< CUSTOM METHODS
@@ -191,14 +186,6 @@ impl ProjectModuleBuilder {
         let task_repository = Arc::new(TaskRepository::new(db_pool.clone()));
         let task_service = Arc::new(TaskService::with_repository(task_repository.clone()));
 
-        // Timesheet service
-        let timesheet_repository = Arc::new(TimesheetRepository::new(db_pool.clone()));
-        let timesheet_service = Arc::new(TimesheetService::with_repository(timesheet_repository.clone()));
-
-        // TimesheetDetail service
-        let timesheet_detail_repository = Arc::new(TimesheetDetailRepository::new(db_pool.clone()));
-        let timesheet_detail_service = Arc::new(TimesheetDetailService::with_repository(timesheet_detail_repository.clone()));
-
         // <<< CUSTOM
         let query_service: std::sync::Arc<dyn crate::exports::ProjectQueryService> =
             std::sync::Arc::new(crate::exports::ProjectQueryServiceImpl::new(
@@ -207,9 +194,10 @@ impl ProjectModuleBuilder {
                 project_template_service.clone(),
                 project_template_task_service.clone(),
                 task_service.clone(),
-                timesheet_service.clone(),
-                timesheet_detail_service.clone(),
             ));
+        let write_service = std::sync::Arc::new(
+            crate::application::service::ProjectWriteService::new(db_pool.clone()),
+        );
         // END CUSTOM
 
         Ok(ProjectModule {
@@ -218,10 +206,9 @@ impl ProjectModuleBuilder {
             project_template_service,
             project_template_task_service,
             task_service,
-            timesheet_service,
-            timesheet_detail_service,
             // <<< CUSTOM
             query_service,
+            write_service,
             // END CUSTOM
         })
     }

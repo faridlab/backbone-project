@@ -1,41 +1,37 @@
 //! Project domain events (hand-authored, user-owned) — the public extension surface.
 //!
-//! backbone-project posts NO GL. Its one outbound seam points at billing (`TimesheetBilled` — a Sales
-//! Invoice now exists for the delivered time); the rest are read-side funnel signals for cost/margin
-//! analytics. A consuming service supplies the sink (bus, outbox, …).
+//! backbone-project posts NO GL. Its one outbound seam points at billing: an APPROVED
+//! (project, employee, year, month) slice of the converged analytic row was handed to billing
+//! (`TimesheetBilled` — a Sales Invoice now exists), or such an invoice was reversed
+//! (`TimesheetBillingReversed` — the rows re-opened). The rest are read-side funnel signals for
+//! cost/margin analytics. A consuming service supplies the sink (bus, outbox, …).
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// Time was logged against a project (a timesheet was created/submitted with its roll-ups).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TimeLogged {
-    pub timesheet_id: Uuid,
-    pub project_id: Uuid,
-    pub company_id: Uuid,
-    pub billable_amount: Decimal,
-    pub costing_amount: Decimal,
-}
-
-/// A submitted timesheet was handed to billing, which created the Sales Invoice.
+/// An approved (project, employee, year, month) slice of the converged analytic rows was handed
+/// to billing, which created the Sales Invoice. The rows now carry the `invoice_id` link.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimesheetBilled {
-    pub timesheet_id: Uuid,
     pub project_id: Uuid,
+    pub employee_id: Uuid,
     pub company_id: Uuid,
+    pub year: i32,
+    pub month: i32,
     pub invoice_id: Uuid,
     pub billed_amount: Decimal,
 }
 
-/// A submitted timesheet was cancelled — its billable + costing were reversed off the project roll-up.
+/// A timesheet-based Sales Invoice was reversed (credited): the `invoice_id` link was cleared off
+/// its rows, which re-open for editing and re-billing, and the project's billed total rolled down.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TimesheetCancelled {
-    pub timesheet_id: Uuid,
+pub struct TimesheetBillingReversed {
     pub project_id: Uuid,
     pub company_id: Uuid,
-    pub reversed_billable: Decimal,
-    pub reversed_costing: Decimal,
+    pub invoice_id: Uuid,
+    pub credited_amount: Decimal,
+    pub rows_reopened: u64,
 }
 
 /// A project was completed (delivery closed).
@@ -51,9 +47,8 @@ pub struct ProjectCompleted {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum ProjectEvent {
-    TimeLogged(TimeLogged),
     TimesheetBilled(TimesheetBilled),
-    TimesheetCancelled(TimesheetCancelled),
+    TimesheetBillingReversed(TimesheetBillingReversed),
     ProjectCompleted(ProjectCompleted),
 }
 

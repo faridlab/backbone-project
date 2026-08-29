@@ -14,8 +14,6 @@ use crate::application::service::ProjectService;
 use crate::application::service::ProjectTemplateService;
 use crate::application::service::ProjectTemplateTaskService;
 use crate::application::service::TaskService;
-use crate::application::service::TimesheetService;
-use crate::application::service::TimesheetDetailService;
 
 /// Application state for dependency injection.
 ///
@@ -45,10 +43,6 @@ pub struct AppState {
     pub project_template_task_service: Arc<ProjectTemplateTaskService>,
     /// Task service
     pub task_service: Arc<TaskService>,
-    /// Timesheet service
-    pub timesheet_service: Arc<TimesheetService>,
-    /// TimesheetDetail service
-    pub timesheet_detail_service: Arc<TimesheetDetailService>,
 }
 
 impl AppState {
@@ -58,9 +52,7 @@ impl AppState {
         project_service: Arc<ProjectService>,
         project_template_service: Arc<ProjectTemplateService>,
         project_template_task_service: Arc<ProjectTemplateTaskService>,
-        task_service: Arc<TaskService>,
-        timesheet_service: Arc<TimesheetService>,
-        timesheet_detail_service: Arc<TimesheetDetailService>
+        task_service: Arc<TaskService>
     ) -> Self {
         Self {
             activity_type_service,
@@ -68,8 +60,6 @@ impl AppState {
             project_template_service,
             project_template_task_service,
             task_service,
-            timesheet_service,
-            timesheet_detail_service,
         }
     }
 
@@ -81,8 +71,6 @@ impl AppState {
             project_template_service: module.project_template_service.clone(),
             project_template_task_service: module.project_template_task_service.clone(),
             task_service: module.task_service.clone(),
-            timesheet_service: module.timesheet_service.clone(),
-            timesheet_detail_service: module.timesheet_detail_service.clone(),
         }
     }
 }
@@ -97,8 +85,6 @@ pub struct AppStateBuilder {
     project_template_service: Option<Arc<ProjectTemplateService>>,
     project_template_task_service: Option<Arc<ProjectTemplateTaskService>>,
     task_service: Option<Arc<TaskService>>,
-    timesheet_service: Option<Arc<TimesheetService>>,
-    timesheet_detail_service: Option<Arc<TimesheetDetailService>>,
 }
 
 impl AppStateBuilder {
@@ -137,18 +123,6 @@ impl AppStateBuilder {
         self
     }
 
-    /// Set the Timesheet service.
-    pub fn with_timesheet_service(mut self, service: Arc<TimesheetService>) -> Self {
-        self.timesheet_service = Some(service);
-        self
-    }
-
-    /// Set the TimesheetDetail service.
-    pub fn with_timesheet_detail_service(mut self, service: Arc<TimesheetDetailService>) -> Self {
-        self.timesheet_detail_service = Some(service);
-        self
-    }
-
     /// Build the AppState.
     ///
     /// # Panics
@@ -161,8 +135,6 @@ impl AppStateBuilder {
             project_template_service: self.project_template_service.expect("project_template_service is required"),
             project_template_task_service: self.project_template_task_service.expect("project_template_task_service is required"),
             task_service: self.task_service.expect("task_service is required"),
-            timesheet_service: self.timesheet_service.expect("timesheet_service is required"),
-            timesheet_detail_service: self.timesheet_detail_service.expect("timesheet_detail_service is required"),
         }
     }
 }

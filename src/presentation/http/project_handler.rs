@@ -41,6 +41,17 @@ pub enum ProjectError {
     Database(String),
     #[error("Internal error: {0}")]
     Internal(String),
+    // Domain-specific errors from hook rules
+    #[error("A project with logged time cannot be deleted — the analytic rows survive it and would dangle.: {0}")]
+    ProjectHasTimesheetRows(String),
+    #[error("A task with logged time cannot be deleted — the analytic rows survive it and would dangle.: {0}")]
+    TaskHasTimesheetRows(String),
+    #[error("One project per originating sales order — enforced by partial unique index uq_projects_source_so (WHERE source_so_id IS NOT NULL AND not soft-deleted).: {0}")]
+    ProjectSourceSoDuplicate(String),
+    #[error("One task per originating sales-order line — enforced by partial unique index uq_tasks_origin_sale_line (WHERE origin_sale_line_id IS NOT NULL AND not soft-deleted).: {0}")]
+    TaskOriginSaleLineDuplicate(String),
+    #[error("Hybrid status semantics (ADR-0016 pattern 3): closed values are sticky; new logged rows never silently reopen a done task.: {0}")]
+    TaskStatusHybridLatch(String),
 }
 
 impl From<ServiceError> for ProjectError {
@@ -65,6 +76,11 @@ impl axum::response::IntoResponse for ProjectError {
             Self::Validation(_) => (StatusCode::BAD_REQUEST, "PROJECT_VALIDATION_ERROR"),
             Self::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "PROJECT_DATABASE_ERROR"),
             Self::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "PROJECT_INTERNAL_ERROR"),
+            Self::ProjectHasTimesheetRows(_) => (StatusCode::UNPROCESSABLE_ENTITY, "PROJECT_PROJECT_HAS_TIMESHEET_ROWS"),
+            Self::TaskHasTimesheetRows(_) => (StatusCode::UNPROCESSABLE_ENTITY, "PROJECT_TASK_HAS_TIMESHEET_ROWS"),
+            Self::ProjectSourceSoDuplicate(_) => (StatusCode::UNPROCESSABLE_ENTITY, "PROJECT_PROJECT_SOURCE_SO_DUPLICATE"),
+            Self::TaskOriginSaleLineDuplicate(_) => (StatusCode::UNPROCESSABLE_ENTITY, "PROJECT_TASK_ORIGIN_SALE_LINE_DUPLICATE"),
+            Self::TaskStatusHybridLatch(_) => (StatusCode::UNPROCESSABLE_ENTITY, "PROJECT_TASK_STATUS_HYBRID_LATCH"),
         };
 
         let body = serde_json::json!({
@@ -75,6 +91,15 @@ impl axum::response::IntoResponse for ProjectError {
 
         (status, Json(body)).into_response()
     }
+}
+
+/// Domain-specific error codes for Project
+pub mod project_errors {
+    pub const PROJECT_HAS_TIMESHEET_ROWS: &str = "PROJECT_PROJECT_HAS_TIMESHEET_ROWS";
+    pub const TASK_HAS_TIMESHEET_ROWS: &str = "PROJECT_TASK_HAS_TIMESHEET_ROWS";
+    pub const PROJECT_SOURCE_SO_DUPLICATE: &str = "PROJECT_PROJECT_SOURCE_SO_DUPLICATE";
+    pub const TASK_ORIGIN_SALE_LINE_DUPLICATE: &str = "PROJECT_TASK_ORIGIN_SALE_LINE_DUPLICATE";
+    pub const TASK_STATUS_HYBRID_LATCH: &str = "PROJECT_TASK_STATUS_HYBRID_LATCH";
 }
 
 // =============================================================================

@@ -1,0 +1,61 @@
+# =============================================================================
+# ConvergenceGuards — write-path guards for the converged analytic row.
+#
+# Logged effort is the converged analytic row in the timesheet module's schema
+# (timesheet.timesheets); this module holds derived reads over it plus the
+# billing exit. Every guard below declares its enforcement layer (ADR-0015):
+# the origin-key uniques have DB arms (partial unique indexes, fire on raw SQL
+# too); the delete guards and the hybrid-status latch are service-enforced
+# because their predicate reads ANOTHER module's schema — a cross-module DB
+# constraint is impossible by design (modules compose via serialized ports,
+# ADR-0004).
+# =============================================================================
+
+name: ConvergenceGuards
+model: Project
+
+rules:
+  G-PRJ-1:
+    when: [soft_delete]
+    condition: "no live converged row (timesheet.timesheets with project_id = this project and metadata->>'deleted_at' IS NULL) references the project"
+    message: "A project with logged time cannot be deleted — the analytic rows survive it and would dangle."
+    code: project_has_timesheet_rows
+    severity: error
+    enforcement: service
+    justification: "The predicate reads the timesheet module's schema (timesheet.timesheets), so no DB arm is possible — a cross-module FK is impossible by design (modules compose via serialized ports). The guard lives in the module's validated delete verb; the generic CRUD soft-delete surface is documented as trusted-admin-only."
+
+  G-PRJ-2:
+    when: [soft_delete]
+    condition: "no live converged row (timesheet.timesheets with task_id = this task and metadata->>'deleted_at' IS NULL) references the task"
+    message: "A task with logged time cannot be deleted — the analytic rows survive it and would dangle."
+    code: task_has_timesheet_rows
+    severity: error
+    enforcement: service
+    justification: "Same cross-schema shape as G-PRJ-1 — the predicate reads the timesheet module's schema and a DB FK cannot cross module schemas, so the service guard is the whole enforcement."
+
+  G-PRJ-3:
+    when: [create]
+    condition: "at most one live project per (company_id, source_so_id)"
+    message: "One project per originating sales order — enforced by partial unique index uq_projects_source_so (WHERE source_so_id IS NOT NULL AND not soft-deleted)."
+    code: project_source_so_duplicate
+    severity: error
+    enforcement: db
+    note: "The per-order idempotency backstop for service-delivery minting: a repeated confirm of the same order lands here and the minter re-selects the existing project."
+
+  G-PRJ-4:
+    when: [create]
+    condition: "at most one live task per (company_id, origin_sale_line_id)"
+    message: "One task per originating sales-order line — enforced by partial unique index uq_tasks_origin_sale_line (WHERE origin_sale_line_id IS NOT NULL AND not soft-deleted)."
+    code: task_origin_sale_line_duplicate
+    severity: error
+    enforcement: db
+    note: "The per-line idempotency backstop for service-delivery minting; the minter's insert uses ON CONFLICT to re-select the prior task, so a repeated confirm mints exactly once per line."
+
+  G-PRJ-5:
+    when: [update]
+    condition: "task.status: a hand-set completed/cancelled LATCHES (the working-derivation never re-derives over it); setting open/working clears the latch; a non-latched task derives working iff live converged rows reference it, else open"
+    message: "Hybrid status semantics (ADR-0016 pattern 3): closed values are sticky; new logged rows never silently reopen a done task."
+    code: task_status_hybrid_latch
+    severity: error
+    enforcement: service
+    justification: "The latch is procedural state-machine behavior over a cross-schema derivation input (live converged rows in the timesheet module's schema) — not a SQL-expressible predicate on this module's own tables; the task write verb is the only writer of the latch."

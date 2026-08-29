@@ -146,60 +146,6 @@ pub struct TaskDeletedEvent {
 }
 
 // ============================================================================
-// TIMESHEET EVENTS
-// ============================================================================
-
-/// Event published when a Timesheet is created
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetCreatedEvent {
-    pub id: TimesheetId,
-    pub data: TimesheetDto,
-    pub occurred_at: DateTime<Utc>,
-}
-
-/// Event published when a Timesheet is updated
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetUpdatedEvent {
-    pub id: TimesheetId,
-    pub data: TimesheetDto,
-    pub occurred_at: DateTime<Utc>,
-}
-
-/// Event published when a Timesheet is deleted
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetDeletedEvent {
-    pub id: TimesheetId,
-    pub occurred_at: DateTime<Utc>,
-}
-
-// ============================================================================
-// TIMESHEETDETAIL EVENTS
-// ============================================================================
-
-/// Event published when a TimesheetDetail is created
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetDetailCreatedEvent {
-    pub id: TimesheetDetailId,
-    pub data: TimesheetDetailDto,
-    pub occurred_at: DateTime<Utc>,
-}
-
-/// Event published when a TimesheetDetail is updated
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetDetailUpdatedEvent {
-    pub id: TimesheetDetailId,
-    pub data: TimesheetDetailDto,
-    pub occurred_at: DateTime<Utc>,
-}
-
-/// Event published when a TimesheetDetail is deleted
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimesheetDetailDeletedEvent {
-    pub id: TimesheetDetailId,
-    pub occurred_at: DateTime<Utc>,
-}
-
-// ============================================================================
 // MODULE EVENT ENUM
 // ============================================================================
 
@@ -222,12 +168,6 @@ pub enum ProjectEvent {
     TaskCreated(TaskCreatedEvent),
     TaskUpdated(TaskUpdatedEvent),
     TaskDeleted(TaskDeletedEvent),
-    TimesheetCreated(TimesheetCreatedEvent),
-    TimesheetUpdated(TimesheetUpdatedEvent),
-    TimesheetDeleted(TimesheetDeletedEvent),
-    TimesheetDetailCreated(TimesheetDetailCreatedEvent),
-    TimesheetDetailUpdated(TimesheetDetailUpdatedEvent),
-    TimesheetDetailDeleted(TimesheetDetailDeletedEvent),
 }
 
 /// Metadata for module events

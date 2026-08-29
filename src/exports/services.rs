@@ -18,6 +18,11 @@
 // reads over repos it does not own, unlike an outbound port such as `BillingPort`).
 // Wired in `crate::ProjectModule::build` and exposed as `module.query_service`.
 //
+// Analytic rows are NOT read here: logged effort lives in the timesheet module's
+// `timesheet.timesheets` (the converged row); this module exposes only its own tables.
+// The derived money reads travel through `ProjectWriteService::project_financials` /
+// `refresh_project_financials`, which sum the converged rows cross-schema.
+//
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -28,10 +33,10 @@ use super::types::*;
 
 use crate::application::service::{
     ActivityTypeService, ProjectService, ProjectTemplateService, ProjectTemplateTaskService,
-    TaskService, TimesheetService, TimesheetDetailService,
+    TaskService,
 };
 use crate::domain::entity::{
-    ActivityType, Project, ProjectTemplate, ProjectTemplateTask, Task, Timesheet, TimesheetDetail,
+    ActivityType, Project, ProjectTemplate, ProjectTemplateTask, Task,
 };
 
 /// Public query service for Project module
@@ -84,24 +89,6 @@ pub trait ProjectQueryService: Send + Sync {
 
     /// Check if Task exists
     async fn task_exists(&self, id: TaskId) -> Result<bool>;
-
-    /// Get Timesheet by ID
-    async fn get_timesheet(&self, id: TimesheetId) -> Result<Option<TimesheetDto>>;
-
-    /// Get Timesheet summary by ID
-    async fn get_timesheet_summary(&self, id: TimesheetId) -> Result<Option<TimesheetSummary>>;
-
-    /// Check if Timesheet exists
-    async fn timesheet_exists(&self, id: TimesheetId) -> Result<bool>;
-
-    /// Get TimesheetDetail by ID
-    async fn get_timesheet_detail(&self, id: TimesheetDetailId) -> Result<Option<TimesheetDetailDto>>;
-
-    /// Get TimesheetDetail summary by ID
-    async fn get_timesheet_detail_summary(&self, id: TimesheetDetailId) -> Result<Option<TimesheetDetailSummary>>;
-
-    /// Check if TimesheetDetail exists
-    async fn timesheet_detail_exists(&self, id: TimesheetDetailId) -> Result<bool>;
 }
 
 /// Default implementation of [`ProjectQueryService`], delegating each read to the
@@ -113,20 +100,16 @@ pub struct ProjectQueryServiceImpl {
     project_template_service: Arc<ProjectTemplateService>,
     project_template_task_service: Arc<ProjectTemplateTaskService>,
     task_service: Arc<TaskService>,
-    timesheet_service: Arc<TimesheetService>,
-    timesheet_detail_service: Arc<TimesheetDetailService>,
 }
 
 impl ProjectQueryServiceImpl {
-    /// Build a query service over the seven generic-CRUD services.
+    /// Build a query service over the five generic-CRUD services.
     pub fn new(
         activity_type_service: Arc<ActivityTypeService>,
         project_service: Arc<ProjectService>,
         project_template_service: Arc<ProjectTemplateService>,
         project_template_task_service: Arc<ProjectTemplateTaskService>,
         task_service: Arc<TaskService>,
-        timesheet_service: Arc<TimesheetService>,
-        timesheet_detail_service: Arc<TimesheetDetailService>,
     ) -> Self {
         Self {
             activity_type_service,
@@ -134,8 +117,6 @@ impl ProjectQueryServiceImpl {
             project_template_service,
             project_template_task_service,
             task_service,
-            timesheet_service,
-            timesheet_detail_service,
         }
     }
 }
@@ -159,13 +140,7 @@ fn project_template_task_dto(e: ProjectTemplateTask) -> ProjectTemplateTaskDto {
     ProjectTemplateTaskDto { id: ProjectTemplateTaskId(e.id), company_id: e.company_id, template_id: e.template_id, subject: e.subject, task_type: e.task_type, expected_time: e.expected_time, sequence: e.sequence, metadata: meta(&e.metadata) }
 }
 fn task_dto(e: Task) -> TaskDto {
-    TaskDto { id: TaskId(e.id), company_id: e.company_id, project_id: e.project_id, parent_task_id: e.parent_task_id, subject: e.subject, task_type: e.task_type, status: e.status, expected_time: e.expected_time, progress: e.progress, metadata: meta(&e.metadata) }
-}
-fn timesheet_dto(e: Timesheet) -> TimesheetDto {
-    TimesheetDto { id: TimesheetId(e.id), company_id: e.company_id, project_id: e.project_id, employee_id: e.employee_id, currency: e.currency, status: e.status, total_hours: e.total_hours, total_billable_amount: e.total_billable_amount, total_costing_amount: e.total_costing_amount, invoice_id: e.invoice_id, metadata: meta(&e.metadata) }
-}
-fn timesheet_detail_dto(e: TimesheetDetail) -> TimesheetDetailDto {
-    TimesheetDetailDto { id: TimesheetDetailId(e.id), company_id: e.company_id, timesheet_id: e.timesheet_id, activity_type_id: e.activity_type_id, task_id: e.task_id, description: e.description, hours: e.hours, billing_rate: e.billing_rate, costing_rate: e.costing_rate, is_billable: e.is_billable, billable_amount: e.billable_amount, costing_amount: e.costing_amount, metadata: meta(&e.metadata) }
+    TaskDto { id: TaskId(e.id), company_id: e.company_id, project_id: e.project_id, parent_task_id: e.parent_task_id, subject: e.subject, task_type: e.task_type, status: e.status, origin_sale_line_id: e.origin_sale_line_id, expected_time: e.expected_time, progress: e.progress, metadata: meta(&e.metadata) }
 }
 
 #[async_trait]
@@ -218,26 +193,6 @@ impl ProjectQueryService for ProjectQueryServiceImpl {
     }
     async fn task_exists(&self, id: TaskId) -> Result<bool> {
         Ok(self.task_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
-    }
-
-    async fn get_timesheet(&self, id: TimesheetId) -> Result<Option<TimesheetDto>> {
-        Ok(self.timesheet_service.find_by_id(&id.into_inner().to_string()).await?.map(timesheet_dto))
-    }
-    async fn get_timesheet_summary(&self, id: TimesheetId) -> Result<Option<TimesheetSummary>> {
-        Ok(self.timesheet_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| TimesheetSummary { id: TimesheetId(e.id), status: e.status }))
-    }
-    async fn timesheet_exists(&self, id: TimesheetId) -> Result<bool> {
-        Ok(self.timesheet_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
-    }
-
-    async fn get_timesheet_detail(&self, id: TimesheetDetailId) -> Result<Option<TimesheetDetailDto>> {
-        Ok(self.timesheet_detail_service.find_by_id(&id.into_inner().to_string()).await?.map(timesheet_detail_dto))
-    }
-    async fn get_timesheet_detail_summary(&self, id: TimesheetDetailId) -> Result<Option<TimesheetDetailSummary>> {
-        Ok(self.timesheet_detail_service.find_by_id(&id.into_inner().to_string()).await?.map(|e| TimesheetDetailSummary { id: TimesheetDetailId(e.id) }))
-    }
-    async fn timesheet_detail_exists(&self, id: TimesheetDetailId) -> Result<bool> {
-        Ok(self.timesheet_detail_service.find_by_id(&id.into_inner().to_string()).await?.is_some())
     }
 }
 // <<< CUSTOM SERVICES END >>>
