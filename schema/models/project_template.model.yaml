@@ -16,10 +16,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique template id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Org owner # logical FK to organization.Company.id"
       template_name:
         type: string
         attributes: ["@required", "@max(200)"]
@@ -38,8 +34,9 @@ models:
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
     indexes:
-      - type: index
-        fields: [company_id, status]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The per-unit
+      # status listing index is installed by the composing service's tenancy
+      # decorator (org_unit_id-leading), not declared here.
 
   - name: ProjectTemplateTask
     collection: project_template_tasks
@@ -49,10 +46,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique template-task id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Org owner (denormalized from ProjectTemplate) # logical FK to organization.Company.id"
       template_id:
         type: uuid
         attributes: ["@required", "@foreign_key(ProjectTemplate.id)"]
@@ -80,8 +73,6 @@ models:
     indexes:
       - type: index
         fields: [template_id]
-      - type: index
-        fields: [company_id]
 
 enums:
   - name: ProjectTemplateStatus

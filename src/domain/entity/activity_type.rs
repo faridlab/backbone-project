@@ -51,7 +51,6 @@ impl std::ops::Deref for ActivityTypeId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ActivityType {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub name: String,
     pub billing_rate: Decimal,
     pub costing_rate: Decimal,
@@ -68,10 +67,9 @@ impl ActivityType {
     }
 
     /// Create a new ActivityType with required fields
-    pub fn new(company_id: Uuid, name: String, billing_rate: Decimal, costing_rate: Decimal, status: ActivityTypeStatus) -> Self {
+    pub fn new(name: String, billing_rate: Decimal, costing_rate: Decimal, status: ActivityTypeStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             name,
             billing_rate,
             costing_rate,
@@ -144,9 +142,6 @@ impl ActivityType {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "name" => {
                     if let Ok(v) = serde_json::from_value(value) { self.name = v; }
                 }
@@ -213,15 +208,11 @@ impl backbone_orm::EntityRepoMeta for ActivityType {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("status".to_string(), "activity_type_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
         &["name"]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -231,7 +222,6 @@ impl backbone_orm::EntityRepoMeta for ActivityType {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct ActivityTypeBuilder {
-    company_id: Option<Uuid>,
     name: Option<String>,
     billing_rate: Option<Decimal>,
     costing_rate: Option<Decimal>,
@@ -239,12 +229,6 @@ pub struct ActivityTypeBuilder {
 }
 
 impl ActivityTypeBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the name field (required)
     pub fn name(mut self, value: String) -> Self {
         self.name = Some(value);
@@ -273,12 +257,10 @@ impl ActivityTypeBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<ActivityType, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let name = self.name.ok_or_else(|| "name is required".to_string())?;
 
         Ok(ActivityType {
             id: Uuid::new_v4(),
-            company_id,
             name,
             billing_rate: self.billing_rate.unwrap_or(Decimal::from(0)),
             costing_rate: self.costing_rate.unwrap_or(Decimal::from(0)),

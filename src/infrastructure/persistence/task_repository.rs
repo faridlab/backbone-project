@@ -14,7 +14,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::{company_scope, org_scope};
 
 use crate::domain::entity::Task;
 
@@ -45,7 +45,6 @@ impl TaskRepository {
 /// hard-coded `open` and `progress` seeded at 0, so neither is a parameter.
 pub struct NewTaskRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub project_id: Uuid,
     pub parent_task_id: Option<Uuid>,
     pub subject: &'a str,
@@ -53,19 +52,13 @@ pub struct NewTaskRow<'a> {
     pub expected_time: Decimal,
 }
 
-/// A live task's company + current status — what the hybrid status path reads before it writes.
-pub struct TaskScopeRow {
-    pub company_id: Uuid,
-    pub status: String,
-}
-
 /// Hand-written Task SQL. Lives here (not in the write service) per the module's 4-layer rule:
 /// services orchestrate and own the unit of work, repositories hold the SQL.
 impl TaskRepository {
     /// Probe that a task belongs to a project — the adjacency-list tree's parent check.
     ///
-    /// ID-only: no company argument. `fetch_optional_scalar_scoped` means it rides a connection carrying
-    /// the caller's `app.company_id`, so another company's task is simply not found.
+    /// The scalar read twin lives only in the legacy `company_scope` module (ADR-0029); with no
+    /// ambient legacy scope bound it runs as a plain pool read, so the module stays tenant-agnostic.
     pub async fn find_id_in_project(
         &self,
         pool: &PgPool,
@@ -80,39 +73,38 @@ impl TaskRepository {
         .await
     }
 
-    /// Read a live task's company + status — the hybrid status path's lookup. `Ok(None)` = not
-    /// found in scope (fenced exactly as [`Self::find_id_in_project`]).
-    pub async fn find_scope_by_id(
+    /// Read a live task's status. `Ok(None)` = not found. ID-only (ADR-0029): identified by the
+    /// id alone.
+    pub async fn find_status_by_id(
         &self,
         pool: &PgPool,
         task_id: Uuid,
-    ) -> Result<Option<TaskScopeRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+    ) -> Result<Option<String>, sqlx::Error> {
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT company_id, status::text AS status FROM project.tasks
+                r#"SELECT status::text AS status FROM project.tasks
                    WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
             .bind(task_id),
         )
         .await?;
-        Ok(row.map(|r| TaskScopeRow { company_id: r.get("company_id"), status: r.get("status") }))
+        Ok(row.map(|r| r.get::<String, _>("status")))
     }
 
     /// Add a task to a project.
     ///
-    /// A write outside any transaction: takes the pool and runs `execute_scoped` so the RLS fence
-    /// (ADR-0008) applies. The caller wraps this in `with_company_scope(Some(company))` using the
-    /// company it read off the project — that scope is what satisfies the INSERT's WITH CHECK.
+    /// A write outside any transaction: takes the pool and runs the tenant-agnostic scoped execute
+    /// (request-dedicated connection when the caller bound one, plain pool otherwise).
     pub async fn insert_task(&self, pool: &PgPool, t: &NewTaskRow<'_>) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        org_scope::execute_scoped(
             pool,
             sqlx::query(
                 r#"INSERT INTO project.tasks
-                     (id, company_id, project_id, parent_task_id, subject, task_type, status, expected_time, progress)
-                   VALUES ($1,$2,$3,$4,$5,$6,'open'::task_status,$7,0)"#,
+                     (id, project_id, parent_task_id, subject, task_type, status, expected_time, progress)
+                   VALUES ($1,$2,$3,$4,$5,'open'::task_status,$6,0)"#,
             )
-            .bind(t.id).bind(t.company_id).bind(t.project_id).bind(t.parent_task_id).bind(t.subject)
+            .bind(t.id).bind(t.project_id).bind(t.parent_task_id).bind(t.subject)
             .bind(t.task_type).bind(t.expected_time),
         )
         .await?;
@@ -121,8 +113,8 @@ impl TaskRepository {
 
     /// Add a task to a project on the CALLER'S connection — the tx-bound twin of
     /// [`Self::insert_task`], used where several writes must commit as ONE unit (template
-    /// materialization inside the service-delivery mint). The caller has already bound the
-    /// company on the connection — don't re-bind here.
+    /// materialization inside the service-delivery mint). The caller has already relayed any
+    /// ambient org scope onto the connection — don't re-bind here.
     pub async fn insert_task_in_tx(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -130,10 +122,10 @@ impl TaskRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO project.tasks
-                 (id, company_id, project_id, parent_task_id, subject, task_type, status, expected_time, progress)
-               VALUES ($1,$2,$3,$4,$5,$6,'open'::task_status,$7,0)"#,
+                 (id, project_id, parent_task_id, subject, task_type, status, expected_time, progress)
+               VALUES ($1,$2,$3,$4,$5,'open'::task_status,$6,0)"#,
         )
-        .bind(t.id).bind(t.company_id).bind(t.project_id).bind(t.parent_task_id).bind(t.subject)
+        .bind(t.id).bind(t.project_id).bind(t.parent_task_id).bind(t.subject)
         .bind(t.task_type).bind(t.expected_time)
         .execute(&mut *conn)
         .await?;
@@ -143,32 +135,31 @@ impl TaskRepository {
     /// Mint one task per sales-order line — at most once per line.
     ///
     /// The insert lands on the partial unique index `uq_tasks_origin_sale_line` (one live task per
-    /// (company, origin sale line)); on conflict it writes nothing and returns `Ok(None)`, and the
-    /// caller re-selects the prior task via [`Self::find_id_by_origin_sale_line`]. That backstop is
-    /// what makes a repeated order confirm mint exactly one task per line — by database, not
-    /// bookkeeping.
+    /// origin sale line — the origin id is globally unique, so the bare key serves every tenant);
+    /// on conflict it writes nothing and returns `Ok(None)`, and the caller re-selects the prior
+    /// task via [`Self::find_id_by_origin_sale_line`]. That backstop is what makes a repeated
+    /// order confirm mint exactly one task per line — by database, not bookkeeping.
     ///
     /// Takes the CALLER'S connection so the whole service-delivery mint commits as ONE unit. The
-    /// caller has already bound the company on it (`bind_company_on`) — don't re-bind here.
+    /// caller has already relayed any ambient org scope onto it — don't re-bind here.
     pub async fn insert_task_for_sale_line(
         &self,
         conn: &mut sqlx::PgConnection,
         id: Uuid,
-        company_id: Uuid,
         project_id: Uuid,
         origin_sale_line_id: Uuid,
         subject: &str,
     ) -> Result<Option<Uuid>, sqlx::Error> {
         let row = sqlx::query(
             r#"INSERT INTO project.tasks
-                 (id, company_id, project_id, subject, status, expected_time, progress, origin_sale_line_id)
-               VALUES ($1,$2,$3,$4,'open'::task_status,0,0,$5)
-               ON CONFLICT (company_id, origin_sale_line_id)
+                 (id, project_id, subject, status, expected_time, progress, origin_sale_line_id)
+               VALUES ($1,$2,$3,'open'::task_status,0,0,$4)
+               ON CONFLICT (origin_sale_line_id)
                  WHERE origin_sale_line_id IS NOT NULL AND (metadata->>'deleted_at') IS NULL
                DO NOTHING
                RETURNING id"#,
         )
-        .bind(id).bind(company_id).bind(project_id).bind(subject).bind(origin_sale_line_id)
+        .bind(id).bind(project_id).bind(subject).bind(origin_sale_line_id)
         .fetch_optional(&mut *conn)
         .await?;
         Ok(row.map(|r| r.get::<uuid::Uuid, _>("id")))
@@ -176,20 +167,18 @@ impl TaskRepository {
 
     /// The live task minted for a sales-order line, if any — the mint's re-select arm.
     ///
-    /// Runs on the CALLER'S connection (inside the mint tx). The caller has already bound the
-    /// company — don't re-bind here.
+    /// Runs on the CALLER'S connection (inside the mint tx).
     pub async fn find_id_by_origin_sale_line(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         origin_sale_line_id: Uuid,
     ) -> Result<Option<Uuid>, sqlx::Error> {
         let row = sqlx::query(
             r#"SELECT id FROM project.tasks
-               WHERE company_id=$1 AND origin_sale_line_id=$2
+               WHERE origin_sale_line_id=$1
                  AND (metadata->>'deleted_at') IS NULL"#,
         )
-        .bind(company_id).bind(origin_sale_line_id)
+        .bind(origin_sale_line_id)
         .fetch_optional(&mut *conn)
         .await?;
         Ok(row.map(|r| r.get::<uuid::Uuid, _>("id")))
@@ -198,9 +187,10 @@ impl TaskRepository {
     /// Write a hand-set status (the hybrid INVERSE) and progress. The LATCH is the value itself:
     /// a closed status (`completed`/`cancelled`) survives every later derivation; an open/working
     /// status is immediately re-derived by the caller (compute acts as the reset guard).
+    /// Returns rows affected: 0 = not live — the caller reports not found.
     ///
     /// Takes the CALLER'S connection so a hand-set status and the re-derivation read settle as ONE
-    /// unit. The caller has already bound the company — don't re-bind here.
+    /// unit.
     pub async fn set_status(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -224,7 +214,6 @@ impl TaskRepository {
     ///
     /// The EXISTS probe reads the timesheet module's schema on the SAME connection, so the
     /// derivation and the rows it derives from are consistent within the caller's unit of work.
-    /// The caller has already bound the company — don't re-bind here.
     pub async fn derive_status(
         &self,
         conn: &mut sqlx::PgConnection,

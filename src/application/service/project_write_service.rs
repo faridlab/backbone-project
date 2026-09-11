@@ -25,6 +25,7 @@
 //! - [`super::project_delete_guards`] — guarded soft-delete for project/task (refuses while live
 //!   converged rows reference them).
 
+use backbone_orm::org_scope;
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -33,6 +34,31 @@ use crate::infrastructure::persistence::{
     ConvergedTimesheetRepository, ProjectRepository, ProjectTemplateRepository,
     ProjectTemplateTaskRepository, TaskRepository,
 };
+
+/// The legacy tenancy twin echo (ADR-0029): outbound wire shapes that still carry a `company_id`
+/// (the published project events) get the ambient org scope's legacy company id when the composing
+/// service bound one; nil otherwise. Nothing in this module keys a statement on it, and an
+/// undecorated deployment is unfenced by design.
+pub(super) fn legacy_company_echo() -> Uuid {
+    org_scope::current_org_scope()
+        .and_then(|s| s.legacy_company_id())
+        .unwrap_or(Uuid::nil())
+}
+
+/// Re-bind the caller's ambient org scope onto a transaction this service opened itself — the
+/// scope is task-local and a fresh pool transaction carries none of it. With no ambient scope
+/// (standalone deployment, jobs) the transaction stays plain: the module is tenant-agnostic and
+/// the composed decorator owns isolation.
+pub(super) async fn relay_ambient_scope(
+    tx: &mut sqlx::PgConnection,
+) -> Result<(), ProjectError> {
+    if let Some(scope) = org_scope::current_org_scope() {
+        org_scope::bind_org_scope_on(tx, &scope)
+            .await
+            .map_err(ProjectError::Db)?;
+    }
+    Ok(())
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProjectError {
@@ -51,7 +77,6 @@ pub enum ProjectError {
 }
 
 pub struct NewProject {
-    pub company_id: Uuid,
     pub project_name: String,
     pub project_type: String, // project_type variant: external | internal
     pub customer_id: Option<Uuid>,
@@ -137,7 +162,6 @@ pub struct ServiceDeliveryLine {
 /// A confirmed order's service-delivery mint request.
 pub struct ServiceDeliveryRequest {
     pub order_id: Uuid,
-    pub company_id: Uuid,
     pub customer_id: Uuid,
     pub order_number: String,
     pub currency: String,

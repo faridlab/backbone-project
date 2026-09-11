@@ -44,7 +44,6 @@ pub struct ProjectPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct ProjectFilter {
-    pub company_id: Option<Uuid>,
     pub project_name: Option<String>,
     pub project_type: Option<ProjectType>,
     pub customer_id: Option<Uuid>,
@@ -57,7 +56,7 @@ pub struct ProjectFilter {
 impl ProjectFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.project_name.is_some() || self.project_type.is_some() || self.customer_id.is_some() || self.source_so_id.is_some() || self.currency.is_some() || self.status.is_some() || self.notes.is_some()
+        self.project_name.is_some() || self.project_type.is_some() || self.customer_id.is_some() || self.source_so_id.is_some() || self.currency.is_some() || self.status.is_some() || self.notes.is_some()
     }
 }
 

@@ -34,9 +34,6 @@ use crate::domain::entity::ActivityTypeStatus;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateActivityTypeDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
@@ -60,9 +57,6 @@ pub struct CreateActivityTypeDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateActivityTypeDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
@@ -86,9 +80,6 @@ pub struct UpdateActivityTypeDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchActivityTypeDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -104,7 +95,7 @@ pub struct PatchActivityTypeDto {
 impl PatchActivityTypeDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.name.is_some() || self.billing_rate.is_some() || self.costing_rate.is_some() || self.status.is_some()
+        self.name.is_some() || self.billing_rate.is_some() || self.costing_rate.is_some() || self.status.is_some()
     }
 }
 
@@ -122,8 +113,6 @@ impl PatchActivityTypeDto {
 pub struct ActivityTypeResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
     pub billing_rate: Decimal,
@@ -186,9 +175,9 @@ impl ActivityTypeListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct ActivityTypeSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub name: String,
     pub billing_rate: Decimal,
+    pub costing_rate: Decimal,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -200,7 +189,6 @@ impl From<ActivityType> for ActivityTypeResponseDto {
     fn from(entity: ActivityType) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             name: entity.name,
             billing_rate: entity.billing_rate,
             costing_rate: entity.costing_rate,
@@ -215,9 +203,9 @@ impl From<ActivityType> for ActivityTypeSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             name: entity.name,
             billing_rate: entity.billing_rate,
+            costing_rate: entity.costing_rate,
             created_at,
         }
     }
@@ -227,7 +215,6 @@ impl From<CreateActivityTypeDto> for ActivityType {
     fn from(dto: CreateActivityTypeDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             name: dto.name,
             billing_rate: dto.billing_rate,
             costing_rate: dto.costing_rate,
@@ -241,7 +228,6 @@ impl From<&ActivityType> for ActivityTypeResponseDto {
     fn from(entity: &ActivityType) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             name: entity.name.clone(),
             billing_rate: entity.billing_rate.clone(),
             costing_rate: entity.costing_rate.clone(),
@@ -259,7 +245,6 @@ impl backbone_core::FromCreateDto<CreateActivityTypeDto> for ActivityType {
 
 impl backbone_core::ApplyUpdateDto<UpdateActivityTypeDto> for ActivityType {
     fn apply_update(mut self, dto: UpdateActivityTypeDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.name = dto.name;
         self.billing_rate = dto.billing_rate;
         self.costing_rate = dto.costing_rate;

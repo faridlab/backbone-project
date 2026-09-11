@@ -92,8 +92,9 @@ pub trait ProjectQueryService: Send + Sync {
 }
 
 /// Default implementation of [`ProjectQueryService`], delegating each read to the
-/// matching generic-CRUD service. Reads ride the caller's connection (carrying
-/// `app.company_id`), so a cross-tenant row is simply not found.
+/// matching generic-CRUD service. Reads are id-keyed: the module is tenant-agnostic
+/// (ADR-0029) and cross-tenant isolation belongs to the composing service's tenancy
+/// decorator.
 pub struct ProjectQueryServiceImpl {
     activity_type_service: Arc<ActivityTypeService>,
     project_service: Arc<ProjectService>,
@@ -128,19 +129,19 @@ fn meta<S: serde::Serialize>(m: &S) -> serde_json::Value {
 }
 
 fn activity_type_dto(e: ActivityType) -> ActivityTypeDto {
-    ActivityTypeDto { id: ActivityTypeId(e.id), company_id: e.company_id, name: e.name, billing_rate: e.billing_rate, costing_rate: e.costing_rate, status: e.status, metadata: meta(&e.metadata) }
+    ActivityTypeDto { id: ActivityTypeId(e.id), name: e.name, billing_rate: e.billing_rate, costing_rate: e.costing_rate, status: e.status, metadata: meta(&e.metadata) }
 }
 fn project_dto(e: Project) -> ProjectDto {
-    ProjectDto { id: ProjectId(e.id), company_id: e.company_id, project_name: e.project_name, project_type: e.project_type, customer_id: e.customer_id, source_so_id: e.source_so_id, currency: e.currency, status: e.status, expected_start_date: e.expected_start_date, expected_end_date: e.expected_end_date, total_costing_amount: e.total_costing_amount, total_billable_amount: e.total_billable_amount, total_billed_amount: e.total_billed_amount, notes: e.notes, metadata: meta(&e.metadata) }
+    ProjectDto { id: ProjectId(e.id), project_name: e.project_name, project_type: e.project_type, customer_id: e.customer_id, source_so_id: e.source_so_id, currency: e.currency, status: e.status, expected_start_date: e.expected_start_date, expected_end_date: e.expected_end_date, total_costing_amount: e.total_costing_amount, total_billable_amount: e.total_billable_amount, total_billed_amount: e.total_billed_amount, notes: e.notes, metadata: meta(&e.metadata) }
 }
 fn project_template_dto(e: ProjectTemplate) -> ProjectTemplateDto {
-    ProjectTemplateDto { id: ProjectTemplateId(e.id), company_id: e.company_id, template_name: e.template_name, project_type: e.project_type, status: e.status, metadata: meta(&e.metadata) }
+    ProjectTemplateDto { id: ProjectTemplateId(e.id), template_name: e.template_name, project_type: e.project_type, status: e.status, metadata: meta(&e.metadata) }
 }
 fn project_template_task_dto(e: ProjectTemplateTask) -> ProjectTemplateTaskDto {
-    ProjectTemplateTaskDto { id: ProjectTemplateTaskId(e.id), company_id: e.company_id, template_id: e.template_id, subject: e.subject, task_type: e.task_type, expected_time: e.expected_time, sequence: e.sequence, metadata: meta(&e.metadata) }
+    ProjectTemplateTaskDto { id: ProjectTemplateTaskId(e.id), template_id: e.template_id, subject: e.subject, task_type: e.task_type, expected_time: e.expected_time, sequence: e.sequence, metadata: meta(&e.metadata) }
 }
 fn task_dto(e: Task) -> TaskDto {
-    TaskDto { id: TaskId(e.id), company_id: e.company_id, project_id: e.project_id, parent_task_id: e.parent_task_id, subject: e.subject, task_type: e.task_type, status: e.status, origin_sale_line_id: e.origin_sale_line_id, expected_time: e.expected_time, progress: e.progress, metadata: meta(&e.metadata) }
+    TaskDto { id: TaskId(e.id), project_id: e.project_id, parent_task_id: e.parent_task_id, subject: e.subject, task_type: e.task_type, status: e.status, origin_sale_line_id: e.origin_sale_line_id, expected_time: e.expected_time, progress: e.progress, metadata: meta(&e.metadata) }
 }
 
 #[async_trait]

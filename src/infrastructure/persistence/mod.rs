@@ -21,12 +21,10 @@ pub use converged_timesheet_repository::{
     ClearInvoiceRow, ConvergedBillableLine, ConvergedTimesheetRepository, ProjectFinancialSums,
     StampInvoiceRow,
 };
-pub use project_repository::{
-    NewProjectRow, ProjectCompletionRow, ProjectFinancialsRow, ProjectScopeRow,
-};
+pub use project_repository::{NewProjectRow, ProjectCompletionRow, ProjectFinancialsRow};
 pub use project_template_repository::TemplateRow;
 pub use project_template_task_repository::TemplateTaskRow;
-pub use task_repository::{NewTaskRow, TaskScopeRow};
+pub use task_repository::NewTaskRow;
 // END CUSTOM
 
 // Re-exports

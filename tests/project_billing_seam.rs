@@ -15,13 +15,13 @@ use common::*;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-async fn an_activity(pool: &sqlx::PgPool, company: Uuid) -> Uuid {
+async fn an_activity(pool: &sqlx::PgPool) -> Uuid {
     let id = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.activity_types (id, company_id, name, billing_rate, costing_rate, status)
-           VALUES ($1,$2,'Consulting',$3,$4,'active')"#,
+        r#"INSERT INTO project.activity_types (id, name, billing_rate, costing_rate, status)
+           VALUES ($1,'Consulting',$2,$3,'active')"#,
     )
-    .bind(id).bind(company).bind(dec("500000")).bind(dec("300000"))
+    .bind(id).bind(dec("500000")).bind(dec("300000"))
     .execute(pool).await.unwrap();
     id
 }
@@ -37,20 +37,19 @@ async fn pbseam1_period_bills_to_real_sales_invoice() {
         pool: pool.clone(),
     };
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let customer = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
+    let act = an_activity(&pool).await;
 
     let project = svc.create_project(NewProject {
-        company_id: company, project_name: "Acme Site".into(), project_type: "external".into(),
+        project_name: "Acme Site".into(), project_type: "external".into(),
         customer_id: Some(customer), source_so_id: None, currency: Some("IDR".into()),
     }).await.unwrap();
-    seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("8"),
+    seed_row(&pool, employee, project, None, 2026, 7, 6, dec("8"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    seed_approval(&pool, company, employee, 2026, 7, "approved").await;
+    seed_approval(&pool, employee, 2026, 7, "approved").await;
 
-    let out = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink).await.unwrap();
+    let out = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink).await.unwrap();
     assert!(!out.already);
     assert_eq!(out.amount, dec("4000000.00"));
 
@@ -58,7 +57,7 @@ async fn pbseam1_period_bills_to_real_sales_invoice() {
     let (cust, number, net): (Uuid, String, Decimal) = sqlx::query_as(
         "SELECT customer_id, invoice_number, net_total FROM billing.sales_invoices WHERE id=$1")
         .bind(out.invoice_id).fetch_one(&pool).await.unwrap();
-    let key = PeriodKey::of(company, project, employee, 2026, 7);
+    let key = PeriodKey::of(project, employee, 2026, 7);
     assert_eq!(cust, customer, "invoice is for the project's customer");
     assert_eq!(number, key.number(), "adapter numbers by the stable period convention");
     assert_eq!(net, dec("4000000.00"), "net = 8h · 500000");
@@ -68,7 +67,7 @@ async fn pbseam1_period_bills_to_real_sales_invoice() {
     assert_eq!(line_count, 1, "the billable row carried into the invoice");
 
     // Idempotent: a second bill hands off no second invoice.
-    let again = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink).await.unwrap();
+    let again = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink).await.unwrap();
     assert!(again.already);
     assert_eq!(again.invoice_id, out.invoice_id);
     let n: i64 = sqlx::query_scalar(
@@ -89,24 +88,23 @@ async fn pbseam2_unbill_then_rebill_mints_retry_number() {
         pool: pool.clone(),
     };
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let customer = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
+    let act = an_activity(&pool).await;
 
     let project = svc.create_project(NewProject {
-        company_id: company, project_name: "Acme Site 2".into(), project_type: "external".into(),
+        project_name: "Acme Site 2".into(), project_type: "external".into(),
         customer_id: Some(customer), source_so_id: None, currency: Some("IDR".into()),
     }).await.unwrap();
-    seed_row(&pool, company, employee, project, None, 2026, 8, 3, dec("5"),
+    seed_row(&pool, employee, project, None, 2026, 8, 3, dec("5"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    seed_approval(&pool, company, employee, 2026, 8, "approved").await;
-    let key = PeriodKey::of(company, project, employee, 2026, 8);
+    seed_approval(&pool, employee, 2026, 8, "approved").await;
+    let key = PeriodKey::of(project, employee, 2026, 8);
 
-    let first = svc.bill_timesheet_period(project, employee, 2026, 8, company, &billing, &sink).await.unwrap();
-    svc.unbill_invoice(first.invoice_id, company, first.amount, &sink).await.unwrap();
+    let first = svc.bill_timesheet_period(project, employee, 2026, 8, &billing, &sink).await.unwrap();
+    svc.unbill_invoice(first.invoice_id, first.amount, &sink).await.unwrap();
 
-    let second = svc.bill_timesheet_period(project, employee, 2026, 8, company, &billing, &sink).await.unwrap();
+    let second = svc.bill_timesheet_period(project, employee, 2026, 8, &billing, &sink).await.unwrap();
     assert!(!second.already);
     assert_ne!(second.invoice_id, first.invoice_id, "the re-bill is a fresh invoice");
     assert_eq!(second.amount, first.amount, "same slice total");

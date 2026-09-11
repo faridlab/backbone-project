@@ -6,7 +6,6 @@
 
 -- INSERT INTO project.projects (
 --     id,
---     company_id,
 --     project_name,
 --     project_type,
 --     customer_id,

@@ -34,9 +34,6 @@ use crate::domain::entity::ProjectType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateProjectTemplateDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 200)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "template_name")]
@@ -59,9 +56,6 @@ pub struct CreateProjectTemplateDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateProjectTemplateDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 200)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "template_name")]
@@ -84,9 +78,6 @@ pub struct UpdateProjectTemplateDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchProjectTemplateDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 200)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "template_name")]
@@ -100,7 +91,7 @@ pub struct PatchProjectTemplateDto {
 impl PatchProjectTemplateDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.template_name.is_some() || self.project_type.is_some() || self.status.is_some()
+        self.template_name.is_some() || self.project_type.is_some() || self.status.is_some()
     }
 }
 
@@ -118,8 +109,6 @@ impl PatchProjectTemplateDto {
 pub struct ProjectTemplateResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub template_name: String,
     pub project_type: ProjectType,
@@ -181,9 +170,9 @@ impl ProjectTemplateListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct ProjectTemplateSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub template_name: String,
     pub project_type: ProjectType,
+    pub status: ProjectTemplateStatus,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -195,7 +184,6 @@ impl From<ProjectTemplate> for ProjectTemplateResponseDto {
     fn from(entity: ProjectTemplate) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             template_name: entity.template_name,
             project_type: entity.project_type,
             status: entity.status,
@@ -209,9 +197,9 @@ impl From<ProjectTemplate> for ProjectTemplateSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             template_name: entity.template_name,
             project_type: entity.project_type,
+            status: entity.status,
             created_at,
         }
     }
@@ -221,7 +209,6 @@ impl From<CreateProjectTemplateDto> for ProjectTemplate {
     fn from(dto: CreateProjectTemplateDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             template_name: dto.template_name,
             project_type: dto.project_type,
             status: dto.status,
@@ -234,7 +221,6 @@ impl From<&ProjectTemplate> for ProjectTemplateResponseDto {
     fn from(entity: &ProjectTemplate) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             template_name: entity.template_name.clone(),
             project_type: entity.project_type.clone(),
             status: entity.status.clone(),
@@ -251,7 +237,6 @@ impl backbone_core::FromCreateDto<CreateProjectTemplateDto> for ProjectTemplate 
 
 impl backbone_core::ApplyUpdateDto<UpdateProjectTemplateDto> for ProjectTemplate {
     fn apply_update(mut self, dto: UpdateProjectTemplateDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.template_name = dto.template_name;
         self.project_type = dto.project_type;
         self.status = dto.status;

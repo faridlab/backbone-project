@@ -6,7 +6,6 @@
 
 -- INSERT INTO project.activity_types (
 --     id,
---     company_id,
 --     name,
 --     billing_rate,
 --     costing_rate,

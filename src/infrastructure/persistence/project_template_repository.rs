@@ -48,11 +48,11 @@ pub struct TemplateRow {
 /// Hand-written ProjectTemplate SQL. Lives here (not in the write service) per the module's 4-layer
 /// rule: services orchestrate and own the unit of work, repositories hold the SQL.
 impl ProjectTemplateRepository {
-    /// Read a live template for instantiation. `Ok(None)` = no such template in scope.
+    /// Read a live template for instantiation. `Ok(None)` = no such live template.
     ///
-    /// A read outside any transaction; the caller wraps the whole instantiation in
-    /// `with_company_scope(Some(company_id))` (the company is on its parameter), so this and every
-    /// nested write are fenced (ADR-0008).
+    /// A read outside any transaction — it rides the request-dedicated connection when the
+    /// composing service bound one (carrying the decorator's fence variables), plainly on the
+    /// pool otherwise (ADR-0029).
     pub async fn find_for_instantiate(
         &self,
         pool: &PgPool,

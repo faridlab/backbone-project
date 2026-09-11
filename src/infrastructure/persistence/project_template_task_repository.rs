@@ -52,8 +52,9 @@ pub struct TemplateTaskRow {
 impl ProjectTemplateTaskRepository {
     /// List a template's tasks in `sequence` order — the order instantiation materializes them in.
     ///
-    /// A read outside any transaction; the caller wraps the whole instantiation in
-    /// `with_company_scope(Some(company_id))`, so this is fenced (ADR-0008).
+    /// A read outside any transaction — it rides the request-dedicated connection when the
+    /// composing service bound one (carrying the decorator's fence variables), plainly on the
+    /// pool otherwise (ADR-0029).
     pub async fn list_by_template(
         &self,
         pool: &PgPool,

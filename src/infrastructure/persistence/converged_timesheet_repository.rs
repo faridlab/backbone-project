@@ -2,15 +2,16 @@
 //!
 //! Logged effort lives in ONE place: `timesheet.timesheets`, owned by the timesheet
 //! module. This module holds NO table of its own for it — every statement here reads or
-//! stamps that row cross-schema inside one host database, always company-fenced (the
-//! timesheet schema carries its own strict fence; pool reads ride the company-scoped
-//! helpers and tx statements run on a connection whose `app.company_id` the caller has
-//! bound, satisfying BOTH schemas' fences).
+//! stamps that row cross-schema inside one host database. The module is tenant-agnostic
+//! (ADR-0029): statements carry no scoping predicate of their own — pool reads ride the
+//! tenant-agnostic helpers (request-dedicated connection when the caller bound one, plain
+//! pool otherwise) and tx statements run on the connection the caller already relayed any
+//! ambient org scope onto.
 //!
 //! The row carries no state and no approval of its own: `timesheet.timesheet_approvals`
-//! (per company/employee/year/month) is the billability gate, and the per-row billing
-//! artifact is the `invoice_id` link — a link, not a status. This repository holds the
-//! SQL for exactly those touchpoints:
+//! (per employee/year/month) is the billability gate, and the per-row billing artifact is
+//! the `invoice_id` link — a link, not a status. This repository holds the SQL for exactly
+//! those touchpoints:
 //!
 //! - the approval gate read (billability),
 //! - the billable period-line read + the `invoice_id` stamp (billing exit),
@@ -22,7 +23,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::{company_scope, org_scope};
 
 /// One billable converged row of a period slice — what the billing exit hands to billing.
 pub struct ConvergedBillableLine {
@@ -56,7 +57,7 @@ pub struct ProjectFinancialSums {
 }
 
 /// Stateless repository: the table belongs to the timesheet module's schema, so there is
-/// no `GenericCrudRepository` to wrap — only named, company-fenced statements.
+/// no `GenericCrudRepository` to wrap — only named statements.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ConvergedTimesheetRepository;
 
@@ -69,16 +70,15 @@ impl ConvergedTimesheetRepository {
 }
 
 impl ConvergedTimesheetRepository {
-    /// The billability gate: the status of the covering per-(company, employee, year,
-    /// month) approval cycle. `Ok(None)` = no cycle row exists at all (nothing approved).
+    /// The billability gate: the status of the covering per-(employee, year, month)
+    /// approval cycle. `Ok(None)` = no cycle row exists at all (nothing approved — fails
+    /// closed).
     ///
-    /// Read outside a tx on the pool — `fetch_optional_scalar_scoped` rides a connection
-    /// carrying the caller's `app.company_id`, so another company's cycle is simply not
-    /// found (fails closed: no row → not approved).
+    /// The scalar read twin lives only in the legacy `company_scope` module (ADR-0029);
+    /// with no ambient legacy scope bound it runs as a plain pool read.
     pub async fn approval_status(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         employee_id: Uuid,
         year: i32,
         month: i32,
@@ -87,10 +87,9 @@ impl ConvergedTimesheetRepository {
             pool,
             sqlx::query_scalar::<_, String>(
                 r#"SELECT status::text FROM timesheet.timesheet_approvals
-                   WHERE company_id=$1 AND employee_id=$2 AND year=$3 AND month=$4
+                   WHERE employee_id=$1 AND year=$2 AND month=$3
                      AND (metadata->>'deleted_at') IS NULL"#,
             )
-            .bind(company_id)
             .bind(employee_id)
             .bind(year)
             .bind(month),
@@ -102,12 +101,11 @@ impl ConvergedTimesheetRepository {
     /// slice — the exact set the billing exit invoices. Rates are plain-stored snapshots
     /// (never recomputed here); `billable_amount > 0` implies a non-NULL billing rate.
     ///
-    /// Read outside a tx, fenced as [`Self::approval_status`]. An event/job caller wraps
-    /// it in `with_company_scope(Some(company_id))` or it fails closed.
+    /// The multi-row read twin lives only in the legacy `company_scope` module (ADR-0029);
+    /// with no ambient legacy scope bound it runs as a plain pool read.
     pub async fn list_billable_period_lines(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         project_id: Uuid,
         employee_id: Uuid,
         year: i32,
@@ -118,13 +116,12 @@ impl ConvergedTimesheetRepository {
             sqlx::query(
                 r#"SELECT id, activity_type_id, remark, unit_amount, billing_rate, billable_amount
                    FROM timesheet.timesheets
-                   WHERE company_id=$1 AND project_id=$2 AND employee_id=$3
-                     AND year=$4 AND month=$5
+                   WHERE project_id=$1 AND employee_id=$2
+                     AND year=$3 AND month=$4
                      AND is_billable AND billable_amount > 0 AND invoice_id IS NULL
                      AND (metadata->>'deleted_at') IS NULL
                    ORDER BY date, id"#,
             )
-            .bind(company_id)
             .bind(project_id)
             .bind(employee_id)
             .bind(year)
@@ -147,29 +144,25 @@ impl ConvergedTimesheetRepository {
     /// The invoice already stamped on a period slice, with the total of the rows carrying it —
     /// the billing exit's already-billed pre-check (a repeat of a billed slice reports the prior
     /// invoice instead of cutting a second one). `Ok(None)` = nothing billed for the key yet.
-    ///
-    /// Pool read, fenced as [`Self::approval_status`].
     pub async fn find_invoice_for_period(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         project_id: Uuid,
         employee_id: Uuid,
         year: i32,
         month: i32,
     ) -> Result<Option<(Uuid, Decimal)>, sqlx::Error> {
-        company_scope::fetch_optional_row_scoped(
+        org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
                 r#"SELECT invoice_id, COALESCE(SUM(billable_amount), 0) AS amount
                    FROM timesheet.timesheets
-                   WHERE company_id=$1 AND project_id=$2 AND employee_id=$3
-                     AND year=$4 AND month=$5
+                   WHERE project_id=$1 AND employee_id=$2
+                     AND year=$3 AND month=$4
                      AND invoice_id IS NOT NULL AND (metadata->>'deleted_at') IS NULL
                    GROUP BY invoice_id
                    LIMIT 1"#,
             )
-            .bind(company_id)
             .bind(project_id)
             .bind(employee_id)
             .bind(year)
@@ -187,11 +180,10 @@ impl ConvergedTimesheetRepository {
     /// what makes a period bill AT MOST once.
     ///
     /// Takes the CALLER'S connection so the stamp and the project's billed roll-up commit
-    /// as ONE unit. The caller has already bound the company on it — don't re-bind here.
+    /// as ONE unit.
     pub async fn stamp_invoice_on_period(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         project_id: Uuid,
         employee_id: Uuid,
         year: i32,
@@ -199,14 +191,13 @@ impl ConvergedTimesheetRepository {
         invoice_id: Uuid,
     ) -> Result<StampInvoiceRow, sqlx::Error> {
         let rows = sqlx::query(
-            r#"UPDATE timesheet.timesheets SET invoice_id=$6
-               WHERE company_id=$1 AND project_id=$2 AND employee_id=$3
-                 AND year=$4 AND month=$5
+            r#"UPDATE timesheet.timesheets SET invoice_id=$5
+               WHERE project_id=$1 AND employee_id=$2
+                 AND year=$3 AND month=$4
                  AND is_billable AND billable_amount > 0 AND invoice_id IS NULL
                  AND (metadata->>'deleted_at') IS NULL
                RETURNING billable_amount"#,
         )
-        .bind(company_id)
         .bind(project_id)
         .bind(employee_id)
         .bind(year)
@@ -227,20 +218,18 @@ impl ConvergedTimesheetRepository {
     /// carried the link (an idempotent re-call).
     ///
     /// Takes the CALLER'S connection so the clear and the project's billed roll-down
-    /// commit as ONE unit. The caller has already bound the company — don't re-bind here.
+    /// commit as ONE unit.
     pub async fn clear_invoice(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         invoice_id: Uuid,
     ) -> Result<ClearInvoiceRow, sqlx::Error> {
         let row = sqlx::query(
             r#"UPDATE timesheet.timesheets SET invoice_id=NULL
-               WHERE company_id=$1 AND invoice_id=$2
+               WHERE invoice_id=$1
                  AND (metadata->>'deleted_at') IS NULL
                RETURNING project_id"#,
         )
-        .bind(company_id)
         .bind(invoice_id)
         .fetch_all(&mut *conn)
         .await?;
@@ -260,7 +249,6 @@ impl ConvergedTimesheetRepository {
     pub async fn sum_project_financials(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         project_id: Uuid,
     ) -> Result<ProjectFinancialSums, sqlx::Error> {
         let row = sqlx::query(
@@ -270,10 +258,9 @@ impl ConvergedTimesheetRepository {
                  COALESCE(SUM(billable_amount) FILTER (WHERE invoice_id IS NOT NULL), 0)
                                                    AS total_billed_amount
                FROM timesheet.timesheets
-               WHERE company_id=$1 AND project_id=$2
+               WHERE project_id=$1
                  AND (metadata->>'deleted_at') IS NULL"#,
         )
-        .bind(company_id)
         .bind(project_id)
         .fetch_one(&mut *conn)
         .await?;
@@ -285,42 +272,40 @@ impl ConvergedTimesheetRepository {
     }
 
     /// How many live converged rows reference a project — the delete guard's probe.
-    /// Pool read, fenced as [`Self::approval_status`].
+    ///
+    /// The scalar read twin lives only in the legacy `company_scope` module (ADR-0029);
+    /// with no ambient legacy scope bound it runs as a plain pool read.
     pub async fn count_live_rows_for_project(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         project_id: Uuid,
     ) -> Result<i64, sqlx::Error> {
         company_scope::fetch_one_scalar_scoped(
             pool,
             sqlx::query_scalar::<_, i64>(
                 r#"SELECT count(*) FROM timesheet.timesheets
-                   WHERE company_id=$1 AND project_id=$2
+                   WHERE project_id=$1
                      AND (metadata->>'deleted_at') IS NULL"#,
             )
-            .bind(company_id)
             .bind(project_id),
         )
         .await
     }
 
     /// How many live converged rows reference a task — the delete guard's probe.
-    /// Pool read, fenced as [`Self::approval_status`].
+    /// Legacy-scoped as [`Self::count_live_rows_for_project`].
     pub async fn count_live_rows_for_task(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         task_id: Uuid,
     ) -> Result<i64, sqlx::Error> {
         company_scope::fetch_one_scalar_scoped(
             pool,
             sqlx::query_scalar::<_, i64>(
                 r#"SELECT count(*) FROM timesheet.timesheets
-                   WHERE company_id=$1 AND task_id=$2
+                   WHERE task_id=$1
                      AND (metadata->>'deleted_at') IS NULL"#,
             )
-            .bind(company_id)
             .bind(task_id),
         )
         .await
@@ -332,17 +317,15 @@ impl ConvergedTimesheetRepository {
     pub async fn task_has_live_rows(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         task_id: Uuid,
     ) -> Result<bool, sqlx::Error> {
         let row = sqlx::query(
             r#"SELECT EXISTS (
                  SELECT 1 FROM timesheet.timesheets
-                 WHERE company_id=$1 AND task_id=$2
+                 WHERE task_id=$1
                    AND (metadata->>'deleted_at') IS NULL
                ) AS has_rows"#,
         )
-        .bind(company_id)
         .bind(task_id)
         .fetch_one(&mut *conn)
         .await?;

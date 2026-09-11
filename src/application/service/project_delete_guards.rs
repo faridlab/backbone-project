@@ -9,73 +9,57 @@
 //! The generic CRUD soft-delete surface (`all_crud_routes`) remains the trusted/admin escape hatch;
 //! this verb is the validated path a composing host mounts.
 //!
+//! Tenant-agnostic (ADR-0029): no scope read precedes the guard — the probe runs unscoped and the
+//! soft-delete runs on a plain tx; if the composing service has bound an ambient org scope it is
+//! relayed onto that tx so the composed fence sees it.
+//!
 //! Per the module's 4-layer rule this file holds no SQL — the statements live on
 //! `ConvergedTimesheetRepository` (the EXISTS probes) and `ProjectRepository`/`TaskRepository`
 //! (the soft-deletes); the probe and the delete run on ONE tx so a row written in between cannot
 //! slip past the guard.
 
-use backbone_orm::company_scope;
 use uuid::Uuid;
 
-use super::project_write_service::{ProjectError, ProjectWriteService};
+use super::project_write_service::{relay_ambient_scope, ProjectError, ProjectWriteService};
 
 impl ProjectWriteService {
     /// Soft-delete a project — refused while live converged analytic rows reference it.
-    ///
-    /// ID-only scope read (ADR-0008): another company's project is simply not found; the company
-    /// it returns is bound onto the delete tx.
     pub async fn delete_project(&self, project_id: Uuid) -> Result<(), ProjectError> {
-        let scope = self.projects.find_scope_by_id(&self.pool, project_id).await?
-            .ok_or(ProjectError::NotFound("project"))?;
-        let company_id = scope.company_id;
-
-        company_scope::with_company_scope(Some(company_id), async move {
-            let mut tx = self.pool.begin().await?;
-            company_scope::bind_company_on(&mut tx, company_id).await?;
-            let live = self.rows.count_live_rows_for_project(&self.pool, company_id, project_id).await?;
-            if live > 0 {
-                tx.rollback().await?;
-                return Err(ProjectError::Guarded(
-                    "project still has logged time — delete or move the analytic rows first",
-                ));
-            }
-            let moved = self.projects.soft_delete(&mut tx, project_id).await?;
-            if moved != 1 {
-                tx.rollback().await?;
-                return Err(ProjectError::NotFound("project"));
-            }
-            tx.commit().await?;
-            Ok(())
-        })
-        .await
+        let mut tx = self.pool.begin().await?;
+        relay_ambient_scope(&mut tx).await?;
+        let live = self.rows.count_live_rows_for_project(&self.pool, project_id).await?;
+        if live > 0 {
+            tx.rollback().await?;
+            return Err(ProjectError::Guarded(
+                "project still has logged time — delete or move the analytic rows first",
+            ));
+        }
+        let moved = self.projects.soft_delete(&mut tx, project_id).await?;
+        if moved != 1 {
+            tx.rollback().await?;
+            return Err(ProjectError::NotFound("project"));
+        }
+        tx.commit().await?;
+        Ok(())
     }
 
     /// Soft-delete a task — refused while live converged analytic rows reference it.
-    ///
-    /// ID-only scope read (ADR-0008), same shape as [`Self::delete_project`].
     pub async fn delete_task(&self, task_id: Uuid) -> Result<(), ProjectError> {
-        let scope = self.tasks.find_scope_by_id(&self.pool, task_id).await?
-            .ok_or(ProjectError::NotFound("task"))?;
-        let company_id = scope.company_id;
-
-        company_scope::with_company_scope(Some(company_id), async move {
-            let mut tx = self.pool.begin().await?;
-            company_scope::bind_company_on(&mut tx, company_id).await?;
-            let live = self.rows.count_live_rows_for_task(&self.pool, company_id, task_id).await?;
-            if live > 0 {
-                tx.rollback().await?;
-                return Err(ProjectError::Guarded(
-                    "task still has logged time — delete or move the analytic rows first",
-                ));
-            }
-            let moved = self.tasks.soft_delete(&mut tx, task_id).await?;
-            if moved != 1 {
-                tx.rollback().await?;
-                return Err(ProjectError::NotFound("task"));
-            }
-            tx.commit().await?;
-            Ok(())
-        })
-        .await
+        let mut tx = self.pool.begin().await?;
+        relay_ambient_scope(&mut tx).await?;
+        let live = self.rows.count_live_rows_for_task(&self.pool, task_id).await?;
+        if live > 0 {
+            tx.rollback().await?;
+            return Err(ProjectError::Guarded(
+                "task still has logged time — delete or move the analytic rows first",
+            ));
+        }
+        let moved = self.tasks.soft_delete(&mut tx, task_id).await?;
+        if moved != 1 {
+            tx.rollback().await?;
+            return Err(ProjectError::NotFound("task"));
+        }
+        tx.commit().await?;
+        Ok(())
     }
 }

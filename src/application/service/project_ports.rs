@@ -36,7 +36,6 @@ pub struct InvoiceLineFromTimesheet {
 /// billing as a service Sales Invoice.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct InvoiceFromTimesheetPeriod {
-    pub company_id: Uuid,
     pub project_id: Uuid,
     pub employee_id: Uuid,
     pub year: i32,

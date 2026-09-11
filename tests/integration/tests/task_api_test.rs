@@ -24,7 +24,6 @@ impl TestDataGenerator for TaskTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": Uuid::new_v4().to_string(),
             "project_id": Uuid::new_v4().to_string(),
             "parent_task_id": null,
             "subject": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
@@ -41,7 +40,6 @@ impl TestDataGenerator for TaskTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": Uuid::new_v4().to_string(),
             "project_id": Uuid::new_v4().to_string(),
             "parent_task_id": null,
             "subject": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),

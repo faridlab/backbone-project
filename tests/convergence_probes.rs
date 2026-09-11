@@ -9,8 +9,11 @@
 //!          template forking, and the refusal paths.
 //! - PJ-5 — the origin-key uniques are DATABASE backstops (a raw duplicate insert cannot survive).
 //! - PB-6 — the period billability gate refuses every non-approved cycle state.
-//! - PJ-7 — the roll-up refresh verb is fence-alive: as a restricted non-owner role under
-//!          RLS ENABLE+FORCE the sums see the rows and the update lands; a foreign company refuses.
+//!
+//! The former PJ-7 company-fence probe retired with the tenancy strip (ADR-0029): the module
+//! ships no fence of its own anymore — the undecorated posture (RLS flags armed, zero module
+//! policies, ambient org scope riding the reads) is pinned by `tenancy_posture_probe.rs`, and
+//! row isolation under a decorated host is the composing service's decorator probes.
 
 mod common;
 
@@ -22,19 +25,19 @@ use common::*;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-async fn an_activity(pool: &sqlx::PgPool, company: Uuid) -> Uuid {
+async fn an_activity(pool: &sqlx::PgPool) -> Uuid {
     let id = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.activity_types (id, company_id, name, billing_rate, costing_rate, status)
-           VALUES ($1,$2,'Consulting',$3,$4,'active')"#,
+        r#"INSERT INTO project.activity_types (id, name, billing_rate, costing_rate, status)
+           VALUES ($1,'Consulting',$2,$3,'active')"#,
     )
-    .bind(id).bind(company).bind(dec("500000")).bind(dec("300000"))
+    .bind(id).bind(dec("500000")).bind(dec("300000"))
     .execute(pool).await.unwrap();
     id
 }
-fn ext_project(company: Uuid) -> NewProject {
+fn ext_project() -> NewProject {
     NewProject {
-        company_id: company, project_name: "P".into(), project_type: "external".into(),
+        project_name: "P".into(), project_type: "external".into(),
         customer_id: Some(Uuid::new_v4()), source_so_id: None, currency: Some("IDR".into()),
     }
 }
@@ -45,17 +48,16 @@ fn ext_project(company: Uuid) -> NewProject {
 async fn pj1_rollups_refresh_from_converged_rows() {
     let pool = pool().await;
     let svc = ProjectWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
 
-    let a = seed_row(&pool, company, employee, project, None, 2026, 6, 2, dec("3"),
+    let a = seed_row(&pool, employee, project, None, 2026, 6, 2, dec("3"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    seed_row(&pool, company, employee, project, None, 2026, 7, 3, dec("4"),
+    seed_row(&pool, employee, project, None, 2026, 7, 3, dec("4"),
         dec("500000"), dec("300000"), true, Some(act)).await;
 
-    let fin = svc.refresh_project_financials(company, project).await.unwrap();
+    let fin = svc.refresh_project_financials(project).await.unwrap();
     assert_eq!(fin.total_billable_amount, dec("3500000.00"), "7 billable hours across two months");
     assert_eq!(fin.total_costing_amount, dec("2100000.00"));
 
@@ -64,7 +66,7 @@ async fn pj1_rollups_refresh_from_converged_rows() {
            SET metadata = jsonb_set(metadata, '{deleted_at}', to_jsonb(NOW()))
            WHERE id=$1"#)
         .bind(a).execute(&pool).await.unwrap();
-    let shrunk = svc.refresh_project_financials(company, project).await.unwrap();
+    let shrunk = svc.refresh_project_financials(project).await.unwrap();
     assert_eq!(shrunk.total_billable_amount, dec("2000000.00"), "deleted row no longer counts");
     assert_eq!(shrunk.total_costing_amount, dec("1200000.00"));
 
@@ -80,10 +82,9 @@ async fn pj1_rollups_refresh_from_converged_rows() {
 async fn pj2_hybrid_status_both_directions() {
     let pool = pool().await;
     let svc = ProjectWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
     let task = svc.add_task(NewTask {
         project_id: project, parent_task_id: None, subject: "Build".into(),
         task_type: None, expected_time: Decimal::ZERO,
@@ -91,13 +92,13 @@ async fn pj2_hybrid_status_both_directions() {
 
     // Forward: no rows → open; a live row → working.
     assert_eq!(svc.refresh_task_status(task).await.unwrap(), "open");
-    seed_row(&pool, company, employee, project, Some(task), 2026, 7, 6, dec("2"),
+    seed_row(&pool, employee, project, Some(task), 2026, 7, 6, dec("2"),
         dec("500000"), dec("300000"), true, Some(act)).await;
     assert_eq!(svc.refresh_task_status(task).await.unwrap(), "working");
 
     // Inverse: a hand-set close latches — even new rows never reopen it.
     assert_eq!(svc.set_task_status(task, "completed", dec("100")).await.unwrap(), "completed");
-    seed_row(&pool, company, employee, project, Some(task), 2026, 7, 7, dec("2"),
+    seed_row(&pool, employee, project, Some(task), 2026, 7, 7, dec("2"),
         dec("500000"), dec("300000"), true, Some(act)).await;
     assert_eq!(svc.refresh_task_status(task).await.unwrap(), "completed", "latched task is skipped");
 
@@ -113,15 +114,14 @@ async fn pj2_hybrid_status_both_directions() {
 async fn pj3_delete_guards() {
     let pool = pool().await;
     let svc = ProjectWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
     let task = svc.add_task(NewTask {
         project_id: project, parent_task_id: None, subject: "Build".into(),
         task_type: None, expected_time: Decimal::ZERO,
     }).await.unwrap();
-    let row = seed_row(&pool, company, employee, project, Some(task), 2026, 7, 6, dec("2"),
+    let row = seed_row(&pool, employee, project, Some(task), 2026, 7, 6, dec("2"),
         dec("500000"), dec("300000"), true, Some(act)).await;
 
     let guarded_task = svc.delete_task(task).await;
@@ -139,7 +139,7 @@ async fn pj3_delete_guards() {
     svc.delete_project(project).await.unwrap();
 
     // A virgin project deletes cleanly (never any rows).
-    let virgin = svc.create_project(ext_project(company)).await.unwrap();
+    let virgin = svc.create_project(ext_project()).await.unwrap();
     svc.delete_project(virgin).await.unwrap();
     let gone: Option<Uuid> = sqlx::query_scalar(
         "SELECT id FROM project.projects WHERE id=$1 AND (metadata->>'deleted_at') IS NULL")
@@ -155,25 +155,24 @@ async fn pj3_delete_guards() {
 async fn pj4_mint_idempotent_per_line() {
     let pool = pool().await;
     let svc = ProjectWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let customer = Uuid::new_v4();
 
     // The fork blueprint: active template with two tasks.
     let tpl = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.project_templates (id, company_id, template_name, project_type, status)
-           VALUES ($1,$2,'Managed Service','external','active')"#,
-    ).bind(tpl).bind(company).execute(&pool).await.unwrap();
+        r#"INSERT INTO project.project_templates (id, template_name, project_type, status)
+           VALUES ($1,'Managed Service','external','active')"#,
+    ).bind(tpl).execute(&pool).await.unwrap();
     for (i, subj) in ["Setup", "Support"].iter().enumerate() {
         sqlx::query(
-            r#"INSERT INTO project.project_template_tasks (id, template_id, company_id, subject, expected_time, sequence)
-               VALUES ($1,$2,$3,$4,0,$5)"#,
-        ).bind(Uuid::new_v4()).bind(tpl).bind(company).bind(subj).bind(i as i32)
+            r#"INSERT INTO project.project_template_tasks (id, template_id, subject, expected_time, sequence)
+               VALUES ($1,$2,$3,0,$4)"#,
+        ).bind(Uuid::new_v4()).bind(tpl).bind(subj).bind(i as i32)
             .execute(&pool).await.unwrap();
     }
     // A fixed global project for the task_global_project rung.
     let global = svc.create_project(NewProject {
-        company_id: company, project_name: "Global Service Desk".into(),
+        project_name: "Global Service Desk".into(),
         project_type: "external".into(), customer_id: Some(customer),
         source_so_id: None, currency: Some("IDR".into()),
     }).await.unwrap();
@@ -199,7 +198,7 @@ async fn pj4_mint_idempotent_per_line() {
         line(ServiceTrackingRung::Manual),
     ];
     let req = ServiceDeliveryRequest {
-        order_id: order, company_id: company, customer_id: customer,
+        order_id: order, customer_id: customer,
         order_number: "SO-042".into(), currency: "IDR".into(), lines,
     };
 
@@ -251,7 +250,7 @@ async fn pj4_mint_idempotent_per_line() {
 
     // task_global_project without its fixed project refuses the whole mint.
     let orphan = ServiceDeliveryRequest {
-        order_id: Uuid::new_v4(), company_id: company, customer_id: customer,
+        order_id: Uuid::new_v4(), customer_id: customer,
         order_number: "SO-043".into(), currency: "IDR".into(),
         lines: vec![ServiceDeliveryLine {
             sale_line_id: Uuid::new_v4(), item_id: Uuid::new_v4(), quantity: dec("1"),
@@ -264,42 +263,42 @@ async fn pj4_mint_idempotent_per_line() {
 }
 
 /// PJ-5 — the origin-key uniques are DATABASE backstops, not bookkeeping: a raw second live project
-/// for the same (company, source sales order) or task for the same (company, origin sale line)
-/// cannot be inserted even by hand.
+/// for the same source sales order, or task for the same origin sale line, cannot be inserted even
+/// by hand. Tenant-free since the tenancy strip (ADR-0029): the origin ids are globally unique, so
+/// the bare-keyed partial uniques serve every tenant.
 #[tokio::test]
 async fn pj5_origin_key_uniques() {
     let pool = pool().await;
-    let company = Uuid::new_v4();
     let customer = Uuid::new_v4();
     let order = Uuid::new_v4();
     sqlx::query(
         r#"INSERT INTO project.projects
-             (id, company_id, project_name, project_type, customer_id, source_so_id, currency, status)
-           VALUES ($1,$2,'First','external',$3,$4,'IDR','open')"#,
-    ).bind(Uuid::new_v4()).bind(company).bind(customer).bind(order)
+             (id, project_name, project_type, customer_id, source_so_id, currency, status)
+           VALUES ($1,'First','external',$2,$3,'IDR','open')"#,
+    ).bind(Uuid::new_v4()).bind(customer).bind(order)
         .execute(&pool).await.unwrap();
 
     let dup_project = sqlx::query(
         r#"INSERT INTO project.projects
-             (id, company_id, project_name, project_type, customer_id, source_so_id, currency, status)
-           VALUES ($1,$2,'Second','external',$3,$4,'IDR','open')"#,
-    ).bind(Uuid::new_v4()).bind(company).bind(customer).bind(order)
+             (id, project_name, project_type, customer_id, source_so_id, currency, status)
+           VALUES ($1,'Second','external',$2,$3,'IDR','open')"#,
+    ).bind(Uuid::new_v4()).bind(customer).bind(order)
         .execute(&pool).await;
     assert!(dup_project.is_err(), "a second live project per source sales order cannot be inserted");
 
     let project: Uuid = sqlx::query_scalar(
-        "SELECT id FROM project.projects WHERE company_id=$1 AND source_so_id=$2")
-        .bind(company).bind(order).fetch_one(&pool).await.unwrap();
+        "SELECT id FROM project.projects WHERE source_so_id=$1")
+        .bind(order).fetch_one(&pool).await.unwrap();
     let sale_line = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.tasks (id, company_id, project_id, subject, origin_sale_line_id)
-           VALUES ($1,$2,$3,'First task',$4)"#,
-    ).bind(Uuid::new_v4()).bind(company).bind(project).bind(sale_line)
+        r#"INSERT INTO project.tasks (id, project_id, subject, origin_sale_line_id)
+           VALUES ($1,$2,'First task',$3)"#,
+    ).bind(Uuid::new_v4()).bind(project).bind(sale_line)
         .execute(&pool).await.unwrap();
     let dup_task = sqlx::query(
-        r#"INSERT INTO project.tasks (id, company_id, project_id, subject, origin_sale_line_id)
-           VALUES ($1,$2,$3,'Second task',$4)"#,
-    ).bind(Uuid::new_v4()).bind(company).bind(project).bind(sale_line)
+        r#"INSERT INTO project.tasks (id, project_id, subject, origin_sale_line_id)
+           VALUES ($1,$2,'Second task',$3)"#,
+    ).bind(Uuid::new_v4()).bind(project).bind(sale_line)
         .execute(&pool).await;
     assert!(dup_task.is_err(), "a second live task per origin sale line cannot be inserted");
 }
@@ -312,97 +311,25 @@ async fn pb6_period_gate_refuses_non_approved() {
     let svc = ProjectWriteService::new(pool.clone());
     let billing = FakeBilling::new();
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
 
     for (employee, status) in [
         (Uuid::new_v4(), "pending"),
         (Uuid::new_v4(), "rejected"),
     ] {
-        seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("4"),
+        seed_row(&pool, employee, project, None, 2026, 7, 6, dec("4"),
             dec("500000"), dec("300000"), true, Some(act)).await;
-        seed_approval(&pool, company, employee, 2026, 7, status).await;
-        let refused = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink).await;
+        seed_approval(&pool, employee, 2026, 7, status).await;
+        let refused = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink).await;
         assert!(matches!(refused, Err(ProjectError::Guarded(_))), "{status} cycle refuses");
     }
 
     // No cycle row at all (a month nobody submitted) — fails closed.
     let nobody = Uuid::new_v4();
-    seed_row(&pool, company, nobody, project, None, 2026, 8, 4, dec("4"),
+    seed_row(&pool, nobody, project, None, 2026, 8, 4, dec("4"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    let no_cycle = svc.bill_timesheet_period(project, nobody, 2026, 8, company, &billing, &sink).await;
+    let no_cycle = svc.bill_timesheet_period(project, nobody, 2026, 8, &billing, &sink).await;
     assert!(matches!(no_cycle, Err(ProjectError::Guarded(_))), "absent cycle refuses");
     assert_eq!(billing.invoice_count(), 0, "billing never driven");
-}
-
-/// PJ-7 — the roll-up refresh verb is fence-ALIVE: driven as a restricted non-owner role
-/// (NOBYPASSRLS, RLS ENABLE+FORCE on both touched tables) the cross-schema sums still see the
-/// company's converged rows and the project UPDATE still lands. The verb's transaction is a
-/// pooled connection the surrounding task-local scope never reaches — only the transaction-local
-/// `app.company_id` bind carries the company onto it — so this probe fails loudly (zero rows
-/// through both fences, misdiagnosed as "cannot refresh a closed project") if that bind is ever
-/// lost. The foreign-company leg is the negative control proving the fence genuinely filters.
-#[tokio::test]
-async fn pj7_rollup_refresh_alive_under_the_fence() {
-    let owner = pool().await;
-
-    // One-time posture: a NOBYPASSRLS login role, least privileges (read the analytic rows,
-    // read+update the financial columns), fences enabled and forced on both touched tables.
-    sqlx::raw_sql(
-        r#"
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'project_fence_probe') THEN
-                CREATE ROLE project_fence_probe LOGIN PASSWORD 'project_fence_probe' NOBYPASSRLS;
-            END IF;
-        END $$;
-        GRANT USAGE ON SCHEMA project, timesheet TO project_fence_probe;
-        GRANT SELECT ON timesheet.timesheets TO project_fence_probe;
-        GRANT SELECT, UPDATE ON project.projects TO project_fence_probe;
-        ALTER TABLE project.projects ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE project.projects FORCE ROW LEVEL SECURITY;
-        ALTER TABLE timesheet.timesheets ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE timesheet.timesheets FORCE ROW LEVEL SECURITY;
-        "#,
-    )
-    .execute(&owner)
-    .await
-    .expect("provision fence posture");
-
-    // Seed as the owner (bypasses FORCE); the probe role drives the verb.
-    let company = Uuid::new_v4();
-    let employee = Uuid::new_v4();
-    let svc = ProjectWriteService::new(owner.clone());
-    let project = svc.create_project(ext_project(company)).await.unwrap();
-    seed_row(&owner, company, employee, project, None, 2026, 6, 2, dec("3"),
-        dec("500000"), dec("300000"), true, None).await;
-    seed_row(&owner, company, employee, project, None, 2026, 6, 3, dec("4"),
-        dec("500000"), dec("300000"), false, None).await;
-
-    let fence = sqlx::PgPool::connect(&restricted_dburl()).await.expect("restricted pool");
-    let fsvc = ProjectWriteService::new(fence);
-
-    let fin = fsvc
-        .refresh_project_financials(company, project)
-        .await
-        .expect("refresh passes both fences as a non-owner");
-    assert_eq!(fin.total_billable_amount, dec("1500000.00"), "3 billable hours through the fence");
-    assert_eq!(fin.total_costing_amount, dec("2100000.00"), "7 costed hours through the fence");
-    assert_eq!(fin.total_billed_amount, dec("0.00"));
-
-    // Negative control: a foreign company binds a company the rows do not carry — the sums
-    // read zero and the update finds no project, so the verb refuses.
-    let foreign = fsvc.refresh_project_financials(Uuid::new_v4(), project).await;
-    assert!(foreign.is_err(), "a foreign company must not refresh another tenant's project");
-}
-
-/// The probe role's connection string: the configured URL with its credentials swapped for the
-/// fence probe role's (scheme, host, and database preserved; a credential-less URL simply
-/// gains the role's credentials, which trust authentication ignores).
-fn restricted_dburl() -> String {
-    let base = dburl();
-    let (scheme, rest) = base.split_once("://").expect("database URL carries a scheme");
-    let host_and_db = rest.split_once('@').map(|(_, tail)| tail.to_string()).unwrap_or(rest.to_string());
-    format!("{scheme}://project_fence_probe:project_fence_probe@{host_and_db}")
 }

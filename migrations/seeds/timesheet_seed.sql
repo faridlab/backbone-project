@@ -6,7 +6,6 @@
 
 -- INSERT INTO project.timesheets (
 --     id,
---     company_id,
 --     project_id,
 --     employee_id,
 --     currency,

@@ -6,7 +6,6 @@
 
 -- INSERT INTO project.tasks (
 --     id,
---     company_id,
 --     project_id,
 --     parent_task_id,
 --     subject,

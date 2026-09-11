@@ -48,18 +48,17 @@ impl ProjectEventSink for CapturingSink {
     }
 }
 
-/// The billing unit as a map key: (company, project, employee, year, month).
+/// The billing unit as a map key: (project, employee, year, month).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PeriodKey {
-    pub company_id: Uuid,
     pub project_id: Uuid,
     pub employee_id: Uuid,
     pub year: i32,
     pub month: i32,
 }
 impl PeriodKey {
-    pub fn of(company_id: Uuid, project_id: Uuid, employee_id: Uuid, year: i32, month: i32) -> Self {
-        Self { company_id, project_id, employee_id, year, month }
+    pub fn of(project_id: Uuid, employee_id: Uuid, year: i32, month: i32) -> Self {
+        Self { project_id, employee_id, year, month }
     }
     /// The stable invoice number the billing ADAPTER derives for a period bill
     /// (the module's DTOs deliberately carry no number — numbering is adapter duty).
@@ -97,7 +96,7 @@ impl BillingPort for FakeBilling {
     ) -> Result<InvoiceAck, ProjectRejected> {
         *self.calls.lock().unwrap() += 1;
         let k = PeriodKey::of(
-            req.company_id, req.project_id, req.employee_id, req.year, req.month,
+            req.project_id, req.employee_id, req.year, req.month,
         );
         let mut m = self.invoiced.lock().unwrap();
         let id = *m.entry(k).or_insert_with(Uuid::new_v4);
@@ -133,7 +132,7 @@ impl BillingPort for RealBilling {
             NewInvoiceLine, NewSalesInvoice,
         };
         let k = PeriodKey::of(
-            req.company_id, req.project_id, req.employee_id, req.year, req.month,
+            req.project_id, req.employee_id, req.year, req.month,
         );
         for attempt in 0..9usize {
             let number = Self::try_number(&k, attempt);
@@ -141,7 +140,6 @@ impl BillingPort for RealBilling {
                 .svc
                 .create_sales_invoice(NewSalesInvoice {
                     invoice_number: number.clone(),
-                    company_id: req.company_id,
                     branch_id: None,
                     customer_id: req.customer_id,
                     source_so_id: None,
@@ -215,7 +213,6 @@ impl BillingPort for RealBilling {
 /// Returns the row id.
 pub async fn seed_row(
     pool: &PgPool,
-    company: Uuid,
     employee: Uuid,
     project: Uuid,
     task: Option<Uuid>,
@@ -236,13 +233,12 @@ pub async fn seed_row(
     let costing_amount = (hours * costing_rate).round_dp(2);
     let id: Uuid = sqlx::query_scalar(
         r#"INSERT INTO timesheet.timesheets
-             (company_id, employee_id, project_id, task_id, year, month, date, remark,
+             (employee_id, project_id, task_id, year, month, date, remark,
               entry_type, unit_amount, currency, activity_type_id, billing_rate, costing_rate,
               is_billable, billable_amount, costing_amount)
-           VALUES ($1,$2,$3,$4,$5,$6,make_date($5,$6,$7),'seeded','work',$8,'IDR',$9,$10,$11,$12,$13,$14)
+           VALUES ($1,$2,$3,$4,$5,make_date($4,$5,$6),'seeded','work',$7,'IDR',$8,$9,$10,$11,$12,$13)
            RETURNING id"#,
     )
-    .bind(company)
     .bind(employee)
     .bind(project)
     .bind(task)
@@ -262,11 +258,10 @@ pub async fn seed_row(
     id
 }
 
-/// Seed the covering approval cycle for (company, employee, year, month) — THE billability gate.
+/// Seed the covering approval cycle for (employee, year, month) — THE billability gate.
 /// One live cycle per key is enforced by the timesheet module's partial unique index.
 pub async fn seed_approval(
     pool: &PgPool,
-    company: Uuid,
     employee: Uuid,
     year: i32,
     month: i32,
@@ -274,11 +269,10 @@ pub async fn seed_approval(
 ) -> Uuid {
     let id: Uuid = sqlx::query_scalar(
         r#"INSERT INTO timesheet.timesheet_approvals
-             (company_id, employee_id, year, month, status)
-           VALUES ($1,$2,$3,$4,$5::timesheet_approval_status)
+             (employee_id, year, month, status)
+           VALUES ($1,$2,$3,$4::timesheet_approval_status)
            RETURNING id"#,
     )
-    .bind(company)
     .bind(employee)
     .bind(year)
     .bind(month)

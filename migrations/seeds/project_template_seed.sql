@@ -6,7 +6,6 @@
 
 -- INSERT INTO project.project_templates (
 --     id,
---     company_id,
 --     template_name,
 --     project_type,
 --     is_active,

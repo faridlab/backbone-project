@@ -24,7 +24,6 @@ impl TestDataGenerator for ActivityTypeTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": Uuid::new_v4().to_string(),
             "name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "billing_rate": 0,
             "costing_rate": 0,
@@ -37,7 +36,6 @@ impl TestDataGenerator for ActivityTypeTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": Uuid::new_v4().to_string(),
             "name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "billing_rate": 0,
             "costing_rate": 0,

@@ -49,11 +49,12 @@ pub struct ActivityRatesRow {
 /// Hand-written ActivityType SQL. Lives here (not in the write service) per the module's 4-layer rule:
 /// services orchestrate and own the unit of work, repositories hold the SQL.
 impl ActivityTypeRepository {
-    /// Read an activity type's default rates. `Ok(None)` = no such activity type in scope, in which
-    /// case the caller keeps whatever rate it already had (a zero default).
+    /// Read an activity type's default rates. `Ok(None)` = no such activity type, in which case
+    /// the caller keeps whatever rate it already had (a zero default).
     ///
-    /// ID-only, read outside a tx: it rides a connection carrying the caller's `app.company_id`, so
-    /// another company's activity type is simply not found.
+    /// ID-only, read outside a tx — it rides the request-dedicated connection when the composing
+    /// service bound one (carrying the decorator's fence variables), plainly on the pool
+    /// otherwise (ADR-0029).
     pub async fn find_rates(
         &self,
         pool: &PgPool,

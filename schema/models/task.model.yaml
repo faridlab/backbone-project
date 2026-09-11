@@ -23,10 +23,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique task id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Org owner # logical FK to organization.Company.id"
       project_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Project.id)"]
@@ -71,10 +67,11 @@ models:
         fields: [project_id, status]
       - type: index
         fields: [parent_task_id]
-      - type: unique
-        fields: [company_id, origin_sale_line_id]
-        where: "origin_sale_line_id IS NOT NULL AND (metadata->>'deleted_at') IS NULL"
-        description: "One task per sales-order line — the per-line idempotency backstop for service-delivery minting (a repeated confirm returns the prior task)"
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The per-line
+      # mint idempotency backstop (one live task per originating sales-order line)
+      # is enforcement the schema tree does not derive — declared in
+      # schema/hooks/convergence_guards.hook.yaml (G-PRJ-4) and carried tenant-free
+      # (bare origin_sale_line_id, same predicate) by the tenancy-strip migration.
 
 enums:
   - name: TaskStatus

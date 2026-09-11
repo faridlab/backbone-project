@@ -34,9 +34,6 @@ use crate::domain::entity::AuditMetadata;
 #[serde(rename_all = "camelCase")]
 pub struct CreateProjectTemplateTaskDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "template_id")]
     pub template_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 200)))]
@@ -64,9 +61,6 @@ pub struct CreateProjectTemplateTaskDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateProjectTemplateTaskDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "template_id")]
     pub template_id: Uuid,
@@ -96,9 +90,6 @@ pub struct UpdateProjectTemplateTaskDto {
 #[serde(rename_all = "camelCase")]
 pub struct PatchProjectTemplateTaskDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "template_id")]
     pub template_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 200)))]
@@ -118,7 +109,7 @@ pub struct PatchProjectTemplateTaskDto {
 impl PatchProjectTemplateTaskDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.template_id.is_some() || self.subject.is_some() || self.task_type.is_some() || self.expected_time.is_some() || self.sequence.is_some()
+        self.template_id.is_some() || self.subject.is_some() || self.task_type.is_some() || self.expected_time.is_some() || self.sequence.is_some()
     }
 }
 
@@ -136,8 +127,6 @@ impl PatchProjectTemplateTaskDto {
 pub struct ProjectTemplateTaskResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub template_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -203,9 +192,9 @@ impl ProjectTemplateTaskListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct ProjectTemplateTaskSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub template_id: Uuid,
     pub subject: String,
+    pub task_type: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -217,7 +206,6 @@ impl From<ProjectTemplateTask> for ProjectTemplateTaskResponseDto {
     fn from(entity: ProjectTemplateTask) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             template_id: entity.template_id,
             subject: entity.subject,
             task_type: entity.task_type,
@@ -233,9 +221,9 @@ impl From<ProjectTemplateTask> for ProjectTemplateTaskSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             template_id: entity.template_id,
             subject: entity.subject,
+            task_type: entity.task_type,
             created_at,
         }
     }
@@ -245,7 +233,6 @@ impl From<CreateProjectTemplateTaskDto> for ProjectTemplateTask {
     fn from(dto: CreateProjectTemplateTaskDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             template_id: dto.template_id,
             subject: dto.subject,
             task_type: dto.task_type,
@@ -260,7 +247,6 @@ impl From<&ProjectTemplateTask> for ProjectTemplateTaskResponseDto {
     fn from(entity: &ProjectTemplateTask) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             template_id: entity.template_id.clone(),
             subject: entity.subject.clone(),
             task_type: entity.task_type.clone(),
@@ -279,7 +265,6 @@ impl backbone_core::FromCreateDto<CreateProjectTemplateTaskDto> for ProjectTempl
 
 impl backbone_core::ApplyUpdateDto<UpdateProjectTemplateTaskDto> for ProjectTemplateTask {
     fn apply_update(mut self, dto: UpdateProjectTemplateTaskDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.template_id = dto.template_id;
         self.subject = dto.subject;
         self.task_type = dto.task_type;

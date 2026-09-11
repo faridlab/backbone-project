@@ -21,10 +21,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique project id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Org owner # logical FK to organization.Company.id"
       project_name:
         type: string
         attributes: ["@required", "@max(200)"]
@@ -76,16 +72,17 @@ models:
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
     indexes:
-      - type: index
-        fields: [company_id, status]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The per-unit
+      # status listing index is installed by the composing service's tenancy
+      # decorator (org_unit_id-leading), not declared here.
       - type: index
         fields: [customer_id]
       - type: index
         fields: [source_so_id]
-      - type: unique
-        fields: [company_id, source_so_id]
-        where: "source_so_id IS NOT NULL AND (metadata->>'deleted_at') IS NULL"
-        description: "One project per originating sales order — the per-order idempotency backstop for service-delivery minting (a repeated confirm returns the prior project)"
+      # The per-order mint idempotency backstop (one live project per originating
+      # sales order) is enforcement the schema tree does not derive — declared in
+      # schema/hooks/convergence_guards.hook.yaml (G-PRJ-3) and carried tenant-free
+      # (bare source_so_id, same predicate) by the tenancy-strip migration.
 
 enums:
   - name: ProjectType

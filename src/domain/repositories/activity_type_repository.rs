@@ -7,7 +7,6 @@
 
 use async_trait::async_trait;
 use anyhow::Result;
-use uuid::Uuid;
 
 use crate::domain::entity::{ActivityType, ActivityTypeStatus};
 
@@ -44,7 +43,6 @@ pub struct ActivityTypePaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct ActivityTypeFilter {
-    pub company_id: Option<Uuid>,
     pub name: Option<String>,
     pub status: Option<ActivityTypeStatus>,
 }
@@ -52,7 +50,7 @@ pub struct ActivityTypeFilter {
 impl ActivityTypeFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.name.is_some() || self.status.is_some()
+        self.name.is_some() || self.status.is_some()
     }
 }
 

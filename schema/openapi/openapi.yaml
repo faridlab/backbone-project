@@ -1859,7 +1859,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - name
         - billing_rate
         - costing_rate
@@ -1867,9 +1866,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         name:
@@ -1900,16 +1896,12 @@ components:
     CreateActivityTypeRequest:
       type: object
       required:
-        - company_id
         - name
         - billing_rate
         - costing_rate
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         name:
           type: string
           maxLength: 140
@@ -1925,16 +1917,12 @@ components:
     UpdateActivityTypeRequest:
       type: object
       required:
-        - company_id
         - name
         - billing_rate
         - costing_rate
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         name:
           type: string
           maxLength: 140
@@ -1950,9 +1938,6 @@ components:
     PatchActivityTypeRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         name:
           type: string
           maxLength: 140
@@ -1979,7 +1964,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - project_name
         - project_type
         - currency
@@ -1990,9 +1974,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         project_name:
@@ -2049,7 +2030,6 @@ components:
     CreateProjectRequest:
       type: object
       required:
-        - company_id
         - project_name
         - project_type
         - currency
@@ -2059,9 +2039,6 @@ components:
         - total_billed_amount
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         project_name:
           type: string
           maxLength: 200
@@ -2103,7 +2080,6 @@ components:
     UpdateProjectRequest:
       type: object
       required:
-        - company_id
         - project_name
         - project_type
         - currency
@@ -2113,9 +2089,6 @@ components:
         - total_billed_amount
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         project_name:
           type: string
           maxLength: 200
@@ -2157,9 +2130,6 @@ components:
     PatchProjectRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         project_name:
           type: string
           maxLength: 200
@@ -2212,16 +2182,12 @@ components:
       type: object
       required:
         - id
-        - company_id
         - template_name
         - project_type
         - status
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         template_name:
@@ -2250,15 +2216,11 @@ components:
     CreateProjectTemplateRequest:
       type: object
       required:
-        - company_id
         - template_name
         - project_type
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         template_name:
           type: string
           maxLength: 200
@@ -2272,15 +2234,11 @@ components:
     UpdateProjectTemplateRequest:
       type: object
       required:
-        - company_id
         - template_name
         - project_type
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         template_name:
           type: string
           maxLength: 200
@@ -2294,9 +2252,6 @@ components:
     PatchProjectTemplateRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         template_name:
           type: string
           maxLength: 200
@@ -2321,7 +2276,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - template_id
         - subject
         - expected_time
@@ -2329,9 +2283,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         template_id:
@@ -2368,16 +2319,12 @@ components:
     CreateProjectTemplateTaskRequest:
       type: object
       required:
-        - company_id
         - template_id
         - subject
         - expected_time
         - sequence
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         template_id:
           type: string
           format: uuid
@@ -2399,16 +2346,12 @@ components:
     UpdateProjectTemplateTaskRequest:
       type: object
       required:
-        - company_id
         - template_id
         - subject
         - expected_time
         - sequence
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         template_id:
           type: string
           format: uuid
@@ -2430,9 +2373,6 @@ components:
     PatchProjectTemplateTaskRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         template_id:
           type: string
           format: uuid
@@ -2465,7 +2405,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - project_id
         - subject
         - status
@@ -2474,9 +2413,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         project_id:
@@ -2522,7 +2458,6 @@ components:
     CreateTaskRequest:
       type: object
       required:
-        - company_id
         - project_id
         - subject
         - status
@@ -2530,9 +2465,6 @@ components:
         - progress
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         project_id:
           type: string
           format: uuid
@@ -2563,7 +2495,6 @@ components:
     UpdateTaskRequest:
       type: object
       required:
-        - company_id
         - project_id
         - subject
         - status
@@ -2571,9 +2502,6 @@ components:
         - progress
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         project_id:
           type: string
           format: uuid
@@ -2604,9 +2532,6 @@ components:
     PatchTaskRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         project_id:
           type: string
           format: uuid

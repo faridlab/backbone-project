@@ -9,19 +9,19 @@ use common::*;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-async fn an_activity(pool: &sqlx::PgPool, company: Uuid) -> Uuid {
+async fn an_activity(pool: &sqlx::PgPool) -> Uuid {
     let id = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.activity_types (id, company_id, name, billing_rate, costing_rate, status)
-           VALUES ($1,$2,'Consulting',$3,$4,'active')"#,
+        r#"INSERT INTO project.activity_types (id, name, billing_rate, costing_rate, status)
+           VALUES ($1,'Consulting',$2,$3,'active')"#,
     )
-    .bind(id).bind(company).bind(dec("500000")).bind(dec("300000"))
+    .bind(id).bind(dec("500000")).bind(dec("300000"))
     .execute(pool).await.unwrap();
     id
 }
-fn ext_project(company: Uuid) -> NewProject {
+fn ext_project() -> NewProject {
     NewProject {
-        company_id: company, project_name: "P".into(), project_type: "external".into(),
+        project_name: "P".into(), project_type: "external".into(),
         customer_id: Some(Uuid::new_v4()), source_so_id: None, currency: Some("IDR".into()),
     }
 }
@@ -34,18 +34,17 @@ async fn ip1_bill_idempotent_per_period() {
     let svc = ProjectWriteService::new(pool.clone());
     let billing = FakeBilling::new();
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
-    seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("4"),
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
+    seed_row(&pool, employee, project, None, 2026, 7, 6, dec("4"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    seed_approval(&pool, company, employee, 2026, 7, "approved").await;
+    seed_approval(&pool, employee, 2026, 7, "approved").await;
 
-    let a = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink).await.unwrap();
+    let a = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink).await.unwrap();
     assert!(!a.already);
     assert_eq!(a.amount, dec("2000000.00"));
-    let b = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink).await.unwrap();
+    let b = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink).await.unwrap();
     assert!(b.already, "second bill short-circuits");
     assert_eq!(a.invoice_id, b.invoice_id, "same invoice");
     assert_eq!(billing.invoice_count(), 1, "billing driven exactly once");
@@ -64,17 +63,16 @@ async fn ip2_unbill_reverses_and_reopens() {
     let svc = ProjectWriteService::new(pool.clone());
     let billing = FakeBilling::new();
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
-    let row = seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("4"),
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
+    let row = seed_row(&pool, employee, project, None, 2026, 7, 6, dec("4"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    seed_approval(&pool, company, employee, 2026, 7, "approved").await;
+    seed_approval(&pool, employee, 2026, 7, "approved").await;
 
-    let first = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink).await.unwrap();
+    let first = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink).await.unwrap();
     // The reversal event a credit note would drive (credited amount = the invoice's slice total).
-    svc.unbill_invoice(first.invoice_id, company, first.amount, &sink).await.unwrap();
+    svc.unbill_invoice(first.invoice_id, first.amount, &sink).await.unwrap();
 
     let link: Option<Uuid> = sqlx::query_scalar(
         "SELECT invoice_id FROM timesheet.timesheets WHERE id=$1")
@@ -86,15 +84,15 @@ async fn ip2_unbill_reverses_and_reopens() {
     assert_eq!(billed, dec("0.00"), "credited amount rolled back off");
 
     // Idempotent: reversing the same invoice again changes nothing.
-    svc.unbill_invoice(first.invoice_id, company, first.amount, &sink).await.unwrap();
+    svc.unbill_invoice(first.invoice_id, first.amount, &sink).await.unwrap();
     let billed2: Decimal = sqlx::query_scalar(
         "SELECT total_billed_amount FROM project.projects WHERE id=$1")
         .bind(project).fetch_one(&pool).await.unwrap();
     assert_eq!(billed2, dec("0.00"));
 
     // A re-bill of the re-opened slice mints a FRESH invoice (the adapter renumbers -R{n}).
-    billing.reverse(&PeriodKey::of(company, project, employee, 2026, 7));
-    let second = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink).await.unwrap();
+    billing.reverse(&PeriodKey::of(project, employee, 2026, 7));
+    let second = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink).await.unwrap();
     assert!(!second.already);
     assert_ne!(second.invoice_id, first.invoice_id, "re-bill is a new invoice");
     assert_eq!(second.amount, first.amount);
@@ -111,16 +109,15 @@ async fn ip3_completed_project_terminal() {
     let pool = pool().await;
     let svc = ProjectWriteService::new(pool.clone());
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
-    seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("4"),
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
+    seed_row(&pool, employee, project, None, 2026, 7, 6, dec("4"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    let fin = svc.refresh_project_financials(company, project).await.unwrap();
+    let fin = svc.refresh_project_financials(project).await.unwrap();
     svc.complete_project(project, &sink).await.unwrap();
 
-    let refresh = svc.refresh_project_financials(company, project).await;
+    let refresh = svc.refresh_project_financials(project).await;
     assert!(matches!(refresh, Err(ProjectError::InvalidState(_))), "cannot refresh a closed project");
     let stored: Decimal = sqlx::query_scalar(
         "SELECT total_billable_amount FROM project.projects WHERE id=$1")
@@ -139,21 +136,20 @@ async fn ip4_invoiced_row_write_guard() {
     let svc = ProjectWriteService::new(pool.clone());
     let billing = FakeBilling::new();
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
-    let row = seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("4"),
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
+    let row = seed_row(&pool, employee, project, None, 2026, 7, 6, dec("4"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    seed_approval(&pool, company, employee, 2026, 7, "approved").await;
-    let out = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink).await.unwrap();
+    seed_approval(&pool, employee, 2026, 7, "approved").await;
+    let out = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink).await.unwrap();
 
     let reprice = sqlx::query("UPDATE timesheet.timesheets SET unit_amount=99 WHERE id=$1")
         .bind(row).execute(&pool).await;
     assert!(reprice.is_err(), "an invoiced row cannot change its pricing columns");
 
     // The reversal clears the link; the row is editable again by construction.
-    svc.unbill_invoice(out.invoice_id, company, out.amount, &sink).await.unwrap();
+    svc.unbill_invoice(out.invoice_id, out.amount, &sink).await.unwrap();
     let editable = sqlx::query("UPDATE timesheet.timesheets SET remark='fixed typo' WHERE id=$1")
         .bind(row).execute(&pool).await;
     assert!(editable.is_ok(), "a cleared row is editable again");
@@ -167,20 +163,19 @@ async fn ip5_non_billable_excluded_from_billing() {
     let svc = ProjectWriteService::new(pool.clone());
     let billing = FakeBilling::new();
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
-    seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("4"),
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
+    seed_row(&pool, employee, project, None, 2026, 7, 6, dec("4"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    seed_row(&pool, company, employee, project, None, 2026, 7, 7, dec("6"),
+    seed_row(&pool, employee, project, None, 2026, 7, 7, dec("6"),
         dec("500000"), dec("300000"), false, Some(act)).await;
-    seed_approval(&pool, company, employee, 2026, 7, "approved").await;
+    seed_approval(&pool, employee, 2026, 7, "approved").await;
 
-    let out = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink).await.unwrap();
+    let out = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink).await.unwrap();
     // Only the 4 billable hours: 4·500000 = 2,000,000. The 6 non-billable hours never bill.
     assert_eq!(out.amount, dec("2000000.00"), "only billable hours invoiced");
-    let fin = svc.refresh_project_financials(company, project).await.unwrap();
+    let fin = svc.refresh_project_financials(project).await.unwrap();
     assert_eq!(fin.total_billed_amount, dec("2000000.00"), "billed = billable slice only");
     assert_eq!(fin.total_billable_amount, dec("2000000.00"), "non-billable rows contribute no billable");
     assert_eq!(fin.total_costing_amount, dec("3000000.00"), "all 10 hours cost 10·300000");
@@ -193,18 +188,17 @@ async fn ip5_non_billable_excluded_from_billing() {
 async fn ip6_refresh_tracks_row_lifecycle() {
     let pool = pool().await;
     let svc = ProjectWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
 
     // A correct 4h row, then a fat-fingered 40h row (both billable at 500000 / costing 300000).
-    seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("4"),
+    seed_row(&pool, employee, project, None, 2026, 7, 6, dec("4"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    let typo = seed_row(&pool, company, employee, project, None, 2026, 7, 7, dec("40"),
+    let typo = seed_row(&pool, employee, project, None, 2026, 7, 7, dec("40"),
         dec("500000"), dec("300000"), true, Some(act)).await;
 
-    let inflated = svc.refresh_project_financials(company, project).await.unwrap();
+    let inflated = svc.refresh_project_financials(project).await.unwrap();
     assert_eq!(inflated.total_billable_amount, dec("22000000.00"), "(4+40)·500000 before the fix");
     assert_eq!(inflated.total_costing_amount, dec("13200000.00"));
 
@@ -214,15 +208,15 @@ async fn ip6_refresh_tracks_row_lifecycle() {
            SET metadata = jsonb_set(metadata, '{deleted_at}', to_jsonb(NOW()))
            WHERE id=$1"#)
         .bind(typo).execute(&pool).await.unwrap();
-    let fixed = svc.refresh_project_financials(company, project).await.unwrap();
+    let fixed = svc.refresh_project_financials(project).await.unwrap();
     assert_eq!(fixed.total_billable_amount, dec("2000000.00"), "roll-up returned to the good row");
     assert_eq!(fixed.total_costing_amount, dec("1200000.00"));
 
     // The event trail records what the billing path published (spot-check the union shape).
     let cap = CapturingSink::new();
     let billing = FakeBilling::new();
-    seed_approval(&pool, company, employee, 2026, 7, "approved").await;
-    svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &cap).await.unwrap();
+    seed_approval(&pool, employee, 2026, 7, "approved").await;
+    svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &cap).await.unwrap();
     assert!(cap.events().iter().any(|e| matches!(e, ProjectEvent::TimesheetBilled(_))));
 }
 
@@ -234,14 +228,13 @@ async fn ip7_complete_announces_refreshed_totals() {
     let pool = pool().await;
     let svc = ProjectWriteService::new(pool.clone());
     let cap = CapturingSink::new();
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company).await;
-    let project = svc.create_project(ext_project(company)).await.unwrap();
-    seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("4"),
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
+    seed_row(&pool, employee, project, None, 2026, 7, 6, dec("4"),
         dec("500000"), dec("300000"), true, Some(act)).await;
 
-    let fin = svc.refresh_project_financials(company, project).await.unwrap();
+    let fin = svc.refresh_project_financials(project).await.unwrap();
     svc.complete_project(project, &cap).await.unwrap();
     let announced = cap.events().into_iter().find_map(|e| match e {
         ProjectEvent::ProjectCompleted(c) => Some(c.total_billable_amount),

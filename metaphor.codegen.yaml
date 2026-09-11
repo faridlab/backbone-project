@@ -40,6 +40,11 @@ user_owned:
   - "tests/project_golden_cases.rs"
   - "tests/query_service_port.rs"
   - "tests/convergence_probes.rs"
+  # Tenancy posture probe (ADR-0029): pins the undecorated posture from below —
+  # RLS flags armed with zero module policies, a plain role default-denied, and the
+  # ambient org scope riding the module's reads — in place of the retired company-fence
+  # probes.
+  - "tests/tenancy_posture_probe.rs"
   # Shared test helpers (pool factory, capturing event sink, fake + real billing
   # adapters) hand-written for the four test files above; consumed via `mod common;`.
   - "tests/common/mod.rs"
@@ -63,6 +68,12 @@ user_owned:
   # because a drop-and-retire ALTER is not schema-derivable.
   - "migrations/20260829120000_retire_local_timesheet_model.up.sql"
   - "migrations/20260829120000_retire_local_timesheet_model.down.sql"
+  # The guarded company-artifact strip — the strip's ordering guard is hand-authored logic
+  # (decorator-first: never drop the last tenancy key on a populated table), and the
+  # tenant-free re-creation of the origin-key mint uniques is enforcement the schema tree
+  # does not derive.
+  - "migrations/20260911120000_strip_tenancy.up.sql"
+  - "migrations/20260911120000_strip_tenancy.down.sql"
   # Enforcement declarations the schema tree does not derive: the delete guards over
   # converged rows and the origin-key uniqueness backstops.
   - "schema/hooks/convergence_guards.hook.yaml"

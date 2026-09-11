@@ -51,7 +51,6 @@ impl std::ops::Deref for TaskId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Task {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub project_id: Uuid,
     pub parent_task_id: Option<Uuid>,
     pub subject: String,
@@ -72,10 +71,9 @@ impl Task {
     }
 
     /// Create a new Task with required fields
-    pub fn new(company_id: Uuid, project_id: Uuid, subject: String, status: TaskStatus, expected_time: Decimal, progress: Decimal) -> Self {
+    pub fn new(project_id: Uuid, subject: String, status: TaskStatus, expected_time: Decimal, progress: Decimal) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             project_id,
             parent_task_id: None,
             subject,
@@ -174,9 +172,6 @@ impl Task {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "project_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.project_id = v; }
                 }
@@ -255,7 +250,6 @@ impl backbone_orm::EntityRepoMeta for Task {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("project_id".to_string(), "uuid".to_string());
         m.insert("parent_task_id".to_string(), "uuid".to_string());
         m.insert("origin_sale_line_id".to_string(), "uuid".to_string());
@@ -265,9 +259,6 @@ impl backbone_orm::EntityRepoMeta for Task {
     fn search_fields() -> &'static [&'static str] {
         &["subject"]
     }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
-    }
 }
 
 /// Builder for Task entity
@@ -276,7 +267,6 @@ impl backbone_orm::EntityRepoMeta for Task {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct TaskBuilder {
-    company_id: Option<Uuid>,
     project_id: Option<Uuid>,
     parent_task_id: Option<Uuid>,
     subject: Option<String>,
@@ -288,12 +278,6 @@ pub struct TaskBuilder {
 }
 
 impl TaskBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the project_id field (required)
     pub fn project_id(mut self, value: Uuid) -> Self {
         self.project_id = Some(value);
@@ -346,13 +330,11 @@ impl TaskBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Task, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let project_id = self.project_id.ok_or_else(|| "project_id is required".to_string())?;
         let subject = self.subject.ok_or_else(|| "subject is required".to_string())?;
 
         Ok(Task {
             id: Uuid::new_v4(),
-            company_id,
             project_id,
             parent_task_id: self.parent_task_id,
             subject,

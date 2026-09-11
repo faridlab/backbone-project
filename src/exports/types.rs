@@ -49,7 +49,6 @@ impl From<ActivityTypeId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActivityTypeDto {
     pub id: ActivityTypeId,
-    pub company_id: Uuid,
     pub name: String,
     pub billing_rate: Decimal,
     pub costing_rate: Decimal,
@@ -109,7 +108,6 @@ impl From<ProjectId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectDto {
     pub id: ProjectId,
-    pub company_id: Uuid,
     pub project_name: String,
     pub project_type: ProjectType,
     pub customer_id: Option<Uuid>,
@@ -177,7 +175,6 @@ impl From<ProjectTemplateId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectTemplateDto {
     pub id: ProjectTemplateId,
-    pub company_id: Uuid,
     pub template_name: String,
     pub project_type: ProjectType,
     pub status: ProjectTemplateStatus,
@@ -236,7 +233,6 @@ impl From<ProjectTemplateTaskId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectTemplateTaskDto {
     pub id: ProjectTemplateTaskId,
-    pub company_id: Uuid,
     pub template_id: Uuid,
     pub subject: String,
     pub task_type: Option<String>,
@@ -295,7 +291,6 @@ impl From<TaskId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskDto {
     pub id: TaskId,
-    pub company_id: Uuid,
     pub project_id: Uuid,
     pub parent_task_id: Option<Uuid>,
     pub subject: String,

@@ -11,17 +11,20 @@
 //!   logged rows never silently reopen a done task; setting `open`/`working` clears the latch and
 //!   re-derives at once.
 //!
+//! Tenant-agnostic (ADR-0029): identified by ids alone, reads ride the plain pool and writes run
+//! on plain transactions; if the composing service has bound an ambient org scope it is relayed
+//! onto each transaction this service opens itself so the composed fence sees it.
+//!
 //! Per the module's 4-layer rule this file holds no SQL — the statements live on `TaskRepository`
 //! and `ConvergedTimesheetRepository` (the derivation's EXISTS probe over the timesheet module's
 //! rows).
 
-use backbone_orm::company_scope;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use crate::infrastructure::persistence::NewTaskRow;
 
-use super::project_write_service::{NewTask, ProjectError, ProjectWriteService};
+use super::project_write_service::{relay_ambient_scope, NewTask, ProjectError, ProjectWriteService};
 
 impl ProjectWriteService {
     /// Add a task to a project (adjacency-list tree). A parent, if given, must be in the same project.
@@ -29,15 +32,13 @@ impl ProjectWriteService {
         if t.subject.trim().is_empty() {
             return Err(ProjectError::Invalid("task needs a subject".into()));
         }
-        // RLS scope (ADR-0008), ID-only pattern: identified by the project id alone, so the lookups ride
-        // the request-dedicated connection (which carries the caller's `app.company_id`) — another
-        // company's project is simply not found. The INSERT then binds the company read off the row.
-        let proj = self.projects.find_scope_by_id(&self.pool, t.project_id).await?
+        // Identified by the project id alone: another tenant's project is simply not found, and a
+        // closed project refuses the add.
+        let status = self.projects.find_status_by_id(&self.pool, t.project_id).await?
             .ok_or(ProjectError::NotFound("project"))?;
-        if proj.status != "open" {
+        if status != "open" {
             return Err(ProjectError::InvalidState("project is not open"));
         }
-        let company_id = proj.company_id;
         if let Some(parent) = t.parent_task_id {
             let ok = self.tasks.find_id_in_project(&self.pool, parent, t.project_id).await?;
             if ok.is_none() {
@@ -45,18 +46,14 @@ impl ProjectWriteService {
             }
         }
         let id = Uuid::new_v4();
-        company_scope::with_company_scope(
-            Some(company_id),
-            self.tasks.insert_task(&self.pool, &NewTaskRow {
-                id,
-                company_id,
-                project_id: t.project_id,
-                parent_task_id: t.parent_task_id,
-                subject: &t.subject,
-                task_type: t.task_type.as_deref(),
-                expected_time: t.expected_time,
-            }),
-        )
+        self.tasks.insert_task(&self.pool, &NewTaskRow {
+            id,
+            project_id: t.project_id,
+            parent_task_id: t.parent_task_id,
+            subject: &t.subject,
+            task_type: t.task_type.as_deref(),
+            expected_time: t.expected_time,
+        })
         .await?;
         Ok(id)
     }
@@ -85,31 +82,23 @@ impl ProjectWriteService {
             "open" | "working" | "completed" | "cancelled" => {}
             _ => return Err(ProjectError::Invalid("unknown task status".into())),
         }
-        // RLS scope (ADR-0008), ID-only pattern: the read rides the request-dedicated connection;
-        // the company it returns is bound onto the write tx below.
-        let scope = self.tasks.find_scope_by_id(&self.pool, task_id).await?
-            .ok_or(ProjectError::NotFound("task"))?;
-        let company_id = scope.company_id;
 
-        company_scope::with_company_scope(Some(company_id), async move {
-            let mut tx = self.pool.begin().await?;
-            company_scope::bind_company_on(&mut tx, company_id).await?;
-            let moved = self.tasks.set_status(&mut tx, task_id, status, progress).await?;
-            if moved != 1 {
-                tx.rollback().await?;
-                return Err(ProjectError::NotFound("task"));
-            }
-            // Open/working values are NOT sticky: clear the latch by re-deriving right away.
-            if status == "open" || status == "working" {
-                let has_rows = self.rows.task_has_live_rows(&mut tx, company_id, task_id).await?;
-                self.tasks.derive_status(&mut tx, task_id, has_rows).await?;
-            }
-            tx.commit().await?;
-            let after = self.tasks.find_scope_by_id(&self.pool, task_id).await?
-                .ok_or(ProjectError::NotFound("task"))?;
-            Ok(after.status)
-        })
-        .await
+        let mut tx = self.pool.begin().await?;
+        relay_ambient_scope(&mut tx).await?;
+        let moved = self.tasks.set_status(&mut tx, task_id, status, progress).await?;
+        if moved != 1 {
+            tx.rollback().await?;
+            return Err(ProjectError::NotFound("task"));
+        }
+        // Open/working values are NOT sticky: clear the latch by re-deriving right away.
+        if status == "open" || status == "working" {
+            let has_rows = self.rows.task_has_live_rows(&mut tx, task_id).await?;
+            self.tasks.derive_status(&mut tx, task_id, has_rows).await?;
+        }
+        tx.commit().await?;
+        let after = self.tasks.find_status_by_id(&self.pool, task_id).await?
+            .ok_or(ProjectError::NotFound("task"))?;
+        Ok(after)
     }
 
     /// Derive a task's status from the converged rows — the hybrid FORWARD compute. A non-latched
@@ -120,22 +109,13 @@ impl ProjectWriteService {
     /// referencing the task are written or removed; a composing host wires it onto the timesheet
     /// write events at compose time (the verb is safe to drive directly too).
     pub async fn refresh_task_status(&self, task_id: Uuid) -> Result<String, ProjectError> {
-        // RLS scope (ADR-0008), ID-only pattern: the read rides the request-dedicated connection;
-        // the company it returns is bound onto the derivation tx below.
-        let scope = self.tasks.find_scope_by_id(&self.pool, task_id).await?
+        let mut tx = self.pool.begin().await?;
+        relay_ambient_scope(&mut tx).await?;
+        let has_rows = self.rows.task_has_live_rows(&mut tx, task_id).await?;
+        self.tasks.derive_status(&mut tx, task_id, has_rows).await?;
+        tx.commit().await?;
+        let after = self.tasks.find_status_by_id(&self.pool, task_id).await?
             .ok_or(ProjectError::NotFound("task"))?;
-        let company_id = scope.company_id;
-
-        company_scope::with_company_scope(Some(company_id), async move {
-            let mut tx = self.pool.begin().await?;
-            company_scope::bind_company_on(&mut tx, company_id).await?;
-            let has_rows = self.rows.task_has_live_rows(&mut tx, company_id, task_id).await?;
-            self.tasks.derive_status(&mut tx, task_id, has_rows).await?;
-            tx.commit().await?;
-            let after = self.tasks.find_scope_by_id(&self.pool, task_id).await?
-                .ok_or(ProjectError::NotFound("task"))?;
-            Ok(after.status)
-        })
-        .await
+        Ok(after)
     }
 }

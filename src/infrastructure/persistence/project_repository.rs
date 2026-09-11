@@ -15,7 +15,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::{company_scope, org_scope};
 
 use crate::domain::entity::Project;
 
@@ -48,7 +48,6 @@ impl ProjectRepository {
 /// (`$4::project_type`) and `status` is hard-coded `open`, so neither is a free parameter.
 pub struct NewProjectRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub project_name: &'a str,
     pub project_type: &'a str,
     pub customer_id: Option<Uuid>,
@@ -56,16 +55,9 @@ pub struct NewProjectRow<'a> {
     pub currency: &'a str,
 }
 
-/// A live project's company + delivery state — what the task path reads before it writes.
-pub struct ProjectScopeRow {
-    pub company_id: Uuid,
-    pub status: String,
-}
-
 /// The stored financial triple on `project.projects` — the derived profitability surface.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProjectFinancialsRow {
-    pub company_id: Uuid,
     pub total_costing_amount: Decimal,
     pub total_billable_amount: Decimal,
     pub total_billed_amount: Decimal,
@@ -73,7 +65,6 @@ pub struct ProjectFinancialsRow {
 
 /// The final roll-ups captured as a project completes — what `ProjectCompleted` announces.
 pub struct ProjectCompletionRow {
-    pub company_id: Uuid,
     pub total_billable_amount: Decimal,
     pub total_costing_amount: Decimal,
 }
@@ -83,23 +74,22 @@ pub struct ProjectCompletionRow {
 impl ProjectRepository {
     /// Open a project.
     ///
-    /// A write outside any transaction: takes the pool and runs `execute_scoped` so the RLS fence
-    /// (ADR-0008) applies. The caller wraps this in `with_company_scope(Some(company))` — the company is
-    /// on the DTO, and that scope is what satisfies the INSERT's WITH CHECK (a non-request caller has no
-    /// ambient scope otherwise).
+    /// A write outside any transaction: takes the pool and runs the tenant-agnostic scoped execute
+    /// (request-dedicated connection when the caller bound one, plain pool otherwise) — the module
+    /// is tenant-agnostic (ADR-0029) and the composed decorator owns any fence.
     pub async fn insert_project(
         &self,
         pool: &PgPool,
         p: &NewProjectRow<'_>,
     ) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        org_scope::execute_scoped(
             pool,
             sqlx::query(
                 r#"INSERT INTO project.projects
-                     (id, company_id, project_name, project_type, customer_id, source_so_id, currency, status)
-                   VALUES ($1,$2,$3,$4::project_type,$5,$6,$7,'open'::project_status)"#,
+                     (id, project_name, project_type, customer_id, source_so_id, currency, status)
+                   VALUES ($1,$2,$3::project_type,$4,$5,$6,'open'::project_status)"#,
             )
-            .bind(p.id).bind(p.company_id).bind(p.project_name).bind(p.project_type)
+            .bind(p.id).bind(p.project_name).bind(p.project_type)
             .bind(p.customer_id).bind(p.source_so_id).bind(p.currency),
         )
         .await?;
@@ -109,13 +99,13 @@ impl ProjectRepository {
     /// Open a project for a confirmed sales order — the per-order mint, at most once.
     ///
     /// The insert lands on the partial unique index `uq_projects_source_so` (one live project per
-    /// (company, source sales order)); on conflict it writes nothing and returns `Ok(None)`, and the
-    /// caller re-selects the prior project via [`Self::find_id_by_source_so`]. That backstop is what
-    /// makes a repeated order confirm mint exactly one project per order — by database, not
-    /// bookkeeping.
+    /// source sales order — the origin id is globally unique, so the bare key serves every tenant);
+    /// on conflict it writes nothing and returns `Ok(None)`, and the caller re-selects the prior
+    /// project via [`Self::find_id_by_source_so`]. That backstop is what makes a repeated order
+    /// confirm mint exactly one project per order — by database, not bookkeeping.
     ///
     /// Takes the CALLER'S connection so the mint of project + tasks commits as ONE unit. The caller
-    /// has already bound the company on it (`bind_company_on`) — don't re-bind here.
+    /// has already relayed any ambient org scope onto it — don't re-bind here.
     pub async fn insert_project_for_so(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -123,14 +113,14 @@ impl ProjectRepository {
     ) -> Result<Option<Uuid>, sqlx::Error> {
         let row = sqlx::query(
             r#"INSERT INTO project.projects
-                 (id, company_id, project_name, project_type, customer_id, source_so_id, currency, status)
-               VALUES ($1,$2,$3,$4::project_type,$5,$6,$7,'open'::project_status)
-               ON CONFLICT (company_id, source_so_id)
+                 (id, project_name, project_type, customer_id, source_so_id, currency, status)
+               VALUES ($1,$2,$3::project_type,$4,$5,$6,'open'::project_status)
+               ON CONFLICT (source_so_id)
                  WHERE source_so_id IS NOT NULL AND (metadata->>'deleted_at') IS NULL
                DO NOTHING
                RETURNING id"#,
         )
-        .bind(p.id).bind(p.company_id).bind(p.project_name).bind(p.project_type)
+        .bind(p.id).bind(p.project_name).bind(p.project_type)
         .bind(p.customer_id).bind(p.source_so_id).bind(p.currency)
         .fetch_optional(&mut *conn)
         .await?;
@@ -138,47 +128,42 @@ impl ProjectRepository {
     }
 
     /// The live project minted for a sales order, if any — the mint's re-select arm.
-    ///
-    /// Pool read, `fetch_optional_scalar_scoped` (fenced to the caller's company).
     pub async fn find_id_by_source_so(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         source_so_id: Uuid,
     ) -> Result<Option<Uuid>, sqlx::Error> {
-        company_scope::fetch_optional_scalar_scoped(
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
-            sqlx::query_scalar::<_, Uuid>(
+            sqlx::query(
                 r#"SELECT id FROM project.projects
-                   WHERE company_id=$1 AND source_so_id=$2
+                   WHERE source_so_id=$1
                      AND (metadata->>'deleted_at') IS NULL"#,
             )
-            .bind(company_id)
             .bind(source_so_id),
         )
-        .await
+        .await?;
+        Ok(row.map(|r| r.get::<Uuid, _>("id")))
     }
 
-    /// Read a live project's company + status — the task path's lookup. `Ok(None)` = not found in scope.
+    /// Read a live project's status — the task path's lookup. `Ok(None)` = not found.
     ///
-    /// ID-only: no company argument. `fetch_optional_row_scoped` means it rides a connection carrying
-    /// the caller's `app.company_id`, so another company's project is simply not found. The company
-    /// comes back on the row so the caller can bind the follow-on INSERT to it explicitly.
-    pub async fn find_scope_by_id(
+    /// ID-only (ADR-0029): the module is tenant-agnostic, so identified by the id alone.
+    pub async fn find_status_by_id(
         &self,
         pool: &PgPool,
         project_id: Uuid,
-    ) -> Result<Option<ProjectScopeRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+    ) -> Result<Option<String>, sqlx::Error> {
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT company_id, status::text AS status FROM project.projects
+                r#"SELECT status::text AS status FROM project.projects
                    WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
             .bind(project_id),
         )
         .await?;
-        Ok(row.map(|r| ProjectScopeRow { company_id: r.get("company_id"), status: r.get("status") }))
+        Ok(row.map(|r| r.get::<String, _>("status")))
     }
 
     /// Write the derived financial triple onto the project — the refresh verb's write arm.
@@ -186,7 +171,7 @@ impl ProjectRepository {
     ///
     /// Gated on an OPEN project (a completed project's "final" totals stay final — same posture the
     /// retired incremental roll-up carried). Takes the CALLER'S connection so the sums read off the
-    /// converged rows and this write settle as ONE unit; the caller has already bound the company.
+    /// converged rows and this write settle as ONE unit.
     pub async fn set_financials_open(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -209,25 +194,21 @@ impl ProjectRepository {
     }
 
     /// Read the stored financial triple — the derived read (no live compute, ever).
-    ///
-    /// ID-only, fenced as [`Self::find_scope_by_id`]: under HTTP the request-dedicated connection
-    /// carries the scope; an event/job caller wraps it in `with_company_scope` or it fails closed.
     pub async fn read_financials(
         &self,
         pool: &PgPool,
         project_id: Uuid,
     ) -> Result<Option<ProjectFinancialsRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT company_id, total_costing_amount, total_billable_amount, total_billed_amount
+                r#"SELECT total_costing_amount, total_billable_amount, total_billed_amount
                    FROM project.projects WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
             .bind(project_id),
         )
         .await?;
         Ok(row.map(|r| ProjectFinancialsRow {
-            company_id: r.get("company_id"),
             total_costing_amount: r.get("total_costing_amount"),
             total_billable_amount: r.get("total_billable_amount"),
             total_billed_amount: r.get("total_billed_amount"),
@@ -237,23 +218,26 @@ impl ProjectRepository {
     /// Read the project's customer — who a period slice bills to. `Ok(None)` = an internal project
     /// with nobody to bill (the column is nullable).
     ///
-    /// ID-only, read outside a tx. Under HTTP the request-dedicated connection carries the scope; an
-    /// EVENT/job caller must wrap it in `with_company_scope(Some(company_id))` or it fails closed.
+    /// The scalar/row read twins live only in the legacy `company_scope` module (ADR-0029); with no
+    /// ambient legacy scope bound they run as a plain pool read, so the module stays tenant-agnostic.
     pub async fn find_customer_id(
         &self,
         pool: &PgPool,
         project_id: Uuid,
     ) -> Result<Option<Uuid>, sqlx::Error> {
-        company_scope::fetch_one_scalar_scoped(
+        // The row's absence and a NULL customer both read as `Ok(None)` — the billing exit's
+        // earlier billable-set gate has already proven the project exists by the time this runs.
+        company_scope::fetch_optional_scalar_scoped(
             pool,
             sqlx::query_scalar::<_, Option<Uuid>>("SELECT customer_id FROM project.projects WHERE id=$1")
                 .bind(project_id),
         )
         .await
+        .map(Option::flatten)
     }
 
     /// Read the project's currency — the money context of its rate snapshots, which the billing
-    /// exit carries into the Sales Invoice. ID-only, fenced as [`Self::find_customer_id`].
+    /// exit carries into the Sales Invoice. Legacy-scoped as [`Self::find_customer_id`].
     pub async fn find_currency(
         &self,
         pool: &PgPool,
@@ -270,7 +254,7 @@ impl ProjectRepository {
     /// Roll a billed amount up onto the project's billed total.
     ///
     /// Takes the CALLER'S connection so this and the period's `invoice_id` stamp commit as ONE
-    /// unit. The caller has already bound the company on it — don't re-bind here.
+    /// unit.
     pub async fn add_billed(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -289,8 +273,7 @@ impl ProjectRepository {
     /// Roll a credited amount back off the project's billed total — the reversal's write arm.
     /// Floored at zero so a mis-sized credit can never drive the roll-up negative.
     ///
-    /// Takes the CALLER'S connection so this and the `invoice_id` clear commit as ONE unit. The
-    /// caller has already bound the company on it — don't re-bind here.
+    /// Takes the CALLER'S connection so this and the `invoice_id` clear commit as ONE unit.
     pub async fn subtract_billed(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -331,27 +314,22 @@ impl ProjectRepository {
     }
 
     /// Complete an open project (terminal), returning its FINAL roll-ups. `Ok(None)` = not open.
-    ///
-    /// ID-only: no company argument. This UPDATE…RETURNING rides the request-dedicated connection, so
-    /// RLS fences it to the caller's tenant — another company's project matches 0 rows, which the caller
-    /// reports as not-open.
     pub async fn complete(
         &self,
         pool: &PgPool,
         project_id: Uuid,
     ) -> Result<Option<ProjectCompletionRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
                 r#"UPDATE project.projects SET status='completed'::project_status
                    WHERE id=$1 AND status='open'::project_status AND (metadata->>'deleted_at') IS NULL
-                   RETURNING company_id, total_billable_amount, total_costing_amount"#,
+                   RETURNING total_billable_amount, total_costing_amount"#,
             )
             .bind(project_id),
         )
         .await?;
         Ok(row.map(|r| ProjectCompletionRow {
-            company_id: r.get("company_id"),
             total_billable_amount: r.get("total_billable_amount"),
             total_costing_amount: r.get("total_costing_amount"),
         }))

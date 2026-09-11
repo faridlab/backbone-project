@@ -52,7 +52,6 @@ impl std::ops::Deref for ProjectId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Project {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub project_name: String,
     pub project_type: ProjectType,
     pub customer_id: Option<Uuid>,
@@ -77,10 +76,9 @@ impl Project {
     }
 
     /// Create a new Project with required fields
-    pub fn new(company_id: Uuid, project_name: String, project_type: ProjectType, currency: String, status: ProjectStatus, total_costing_amount: Decimal, total_billable_amount: Decimal, total_billed_amount: Decimal) -> Self {
+    pub fn new(project_name: String, project_type: ProjectType, currency: String, status: ProjectStatus, total_costing_amount: Decimal, total_billable_amount: Decimal, total_billed_amount: Decimal) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             project_name,
             project_type,
             customer_id: None,
@@ -195,9 +193,6 @@ impl Project {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "project_name" => {
                     if let Ok(v) = serde_json::from_value(value) { self.project_name = v; }
                 }
@@ -288,7 +283,6 @@ impl backbone_orm::EntityRepoMeta for Project {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("customer_id".to_string(), "uuid".to_string());
         m.insert("source_so_id".to_string(), "uuid".to_string());
         m.insert("project_type".to_string(), "project_type".to_string());
@@ -298,9 +292,6 @@ impl backbone_orm::EntityRepoMeta for Project {
     fn search_fields() -> &'static [&'static str] {
         &["project_name", "currency"]
     }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
-    }
 }
 
 /// Builder for Project entity
@@ -309,7 +300,6 @@ impl backbone_orm::EntityRepoMeta for Project {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct ProjectBuilder {
-    company_id: Option<Uuid>,
     project_name: Option<String>,
     project_type: Option<ProjectType>,
     customer_id: Option<Uuid>,
@@ -325,12 +315,6 @@ pub struct ProjectBuilder {
 }
 
 impl ProjectBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the project_name field (required)
     pub fn project_name(mut self, value: String) -> Self {
         self.project_name = Some(value);
@@ -407,12 +391,10 @@ impl ProjectBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Project, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let project_name = self.project_name.ok_or_else(|| "project_name is required".to_string())?;
 
         Ok(Project {
             id: Uuid::new_v4(),
-            company_id,
             project_name,
             project_type: self.project_type.unwrap_or_default(),
             customer_id: self.customer_id,

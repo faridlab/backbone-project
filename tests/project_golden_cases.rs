@@ -11,20 +11,20 @@ use common::*;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-async fn an_activity(pool: &sqlx::PgPool, company: Uuid, billing: &str, costing: &str) -> Uuid {
+async fn an_activity(pool: &sqlx::PgPool, billing: &str, costing: &str) -> Uuid {
     let id = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.activity_types (id, company_id, name, billing_rate, costing_rate, status)
-           VALUES ($1,$2,'Consulting',$3,$4,'active')"#,
+        r#"INSERT INTO project.activity_types (id, name, billing_rate, costing_rate, status)
+           VALUES ($1,'Consulting',$2,$3,'active')"#,
     )
-    .bind(id).bind(company).bind(dec(billing)).bind(dec(costing))
+    .bind(id).bind(dec(billing)).bind(dec(costing))
     .execute(pool).await.unwrap();
     id
 }
 
-fn a_project(company: Uuid, customer: Option<Uuid>) -> NewProject {
+fn a_project(customer: Option<Uuid>) -> NewProject {
     NewProject {
-        company_id: company, project_name: "Website Build".into(), project_type: "external".into(),
+        project_name: "Website Build".into(), project_type: "external".into(),
         customer_id: customer, source_so_id: None, currency: Some("IDR".into()),
     }
 }
@@ -36,17 +36,16 @@ fn a_project(company: Uuid, customer: Option<Uuid>) -> NewProject {
 async fn pgc1_refresh_rolls_up_from_converged_rows() {
     let pool = pool().await;
     let svc = ProjectWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company, "500000", "300000").await;
-    let project = svc.create_project(a_project(company, Some(Uuid::new_v4()))).await.unwrap();
+    let act = an_activity(&pool, "500000", "300000").await;
+    let project = svc.create_project(a_project(Some(Uuid::new_v4()))).await.unwrap();
 
-    seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("8"),
+    seed_row(&pool, employee, project, None, 2026, 7, 6, dec("8"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    seed_row(&pool, company, employee, project, None, 2026, 7, 7, dec("2"),
+    seed_row(&pool, employee, project, None, 2026, 7, 7, dec("2"),
         dec("500000"), dec("300000"), false, Some(act)).await;
 
-    let fin = svc.refresh_project_financials(company, project).await.unwrap();
+    let fin = svc.refresh_project_financials(project).await.unwrap();
     assert_eq!(fin.total_billable_amount, dec("4000000.00"));
     assert_eq!(fin.total_costing_amount, dec("3000000.00"));
     assert_eq!(fin.total_billed_amount, dec("0.00"), "nothing billed yet");
@@ -64,15 +63,14 @@ async fn pgc2_bill_period_rolls_billed() {
     let svc = ProjectWriteService::new(pool.clone());
     let billing = FakeBilling::new();
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company, "500000", "300000").await;
-    let project = svc.create_project(a_project(company, Some(Uuid::new_v4()))).await.unwrap();
-    let row = seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("8"),
+    let act = an_activity(&pool, "500000", "300000").await;
+    let project = svc.create_project(a_project(Some(Uuid::new_v4()))).await.unwrap();
+    let row = seed_row(&pool, employee, project, None, 2026, 7, 6, dec("8"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    seed_approval(&pool, company, employee, 2026, 7, "approved").await;
+    seed_approval(&pool, employee, 2026, 7, "approved").await;
 
-    let out = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink)
+    let out = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink)
         .await.unwrap();
     assert!(!out.already);
     assert_eq!(out.amount, dec("4000000.00"));
@@ -89,7 +87,7 @@ async fn pgc2_bill_period_rolls_billed() {
     assert_eq!(billed, dec("4000000.00"), "project billed roll-up");
 
     // A repeat of the same slice reports the prior invoice without driving billing again.
-    let again = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink)
+    let again = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink)
         .await.unwrap();
     assert!(again.already, "second bill short-circuits");
     assert_eq!(again.invoice_id, out.invoice_id, "same invoice");
@@ -101,20 +99,19 @@ async fn pgc2_bill_period_rolls_billed() {
 async fn pgc3_instantiate_template() {
     let pool = pool().await;
     let svc = ProjectWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let tpl = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO project.project_templates (id, company_id, template_name, project_type, status)
-           VALUES ($1,$2,'Onboarding','external','active')"#,
-    ).bind(tpl).bind(company).execute(&pool).await.unwrap();
+        r#"INSERT INTO project.project_templates (id, template_name, project_type, status)
+           VALUES ($1,'Onboarding','external','active')"#,
+    ).bind(tpl).execute(&pool).await.unwrap();
     for (i, subj) in ["Kickoff", "Design", "Handover"].iter().enumerate() {
         sqlx::query(
-            r#"INSERT INTO project.project_template_tasks (id, template_id, company_id, subject, expected_time, sequence)
-               VALUES ($1,$2,$3,$4,0,$5)"#,
-        ).bind(Uuid::new_v4()).bind(tpl).bind(company).bind(subj).bind(i as i32).execute(&pool).await.unwrap();
+            r#"INSERT INTO project.project_template_tasks (id, template_id, subject, expected_time, sequence)
+               VALUES ($1,$2,$3,0,$4)"#,
+        ).bind(Uuid::new_v4()).bind(tpl).bind(subj).bind(i as i32).execute(&pool).await.unwrap();
     }
 
-    let project = svc.instantiate_template(tpl, company, "Acme Onboarding".into(), Some(Uuid::new_v4()))
+    let project = svc.instantiate_template(tpl, "Acme Onboarding".into(), Some(Uuid::new_v4()))
         .await.unwrap();
     let subjects: Vec<String> = sqlx::query_scalar(
         "SELECT subject FROM project.tasks WHERE project_id=$1 ORDER BY (metadata->>'created_at')")
@@ -133,45 +130,44 @@ async fn pgc4_validation() {
     let svc = ProjectWriteService::new(pool.clone());
     let billing = FakeBilling::new();
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let employee = Uuid::new_v4();
-    let act = an_activity(&pool, company, "500000", "300000").await;
+    let act = an_activity(&pool, "500000", "300000").await;
 
     let no_customer = svc.create_project(NewProject {
-        company_id: company, project_name: "X".into(), project_type: "external".into(),
+        project_name: "X".into(), project_type: "external".into(),
         customer_id: None, source_so_id: None, currency: None,
     }).await;
     assert!(matches!(no_customer, Err(ProjectError::Invalid(_))), "external project needs a customer");
 
-    let project = svc.create_project(a_project(company, Some(Uuid::new_v4()))).await.unwrap();
-    seed_row(&pool, company, employee, project, None, 2026, 7, 6, dec("8"),
+    let project = svc.create_project(a_project(Some(Uuid::new_v4()))).await.unwrap();
+    seed_row(&pool, employee, project, None, 2026, 7, 6, dec("8"),
         dec("500000"), dec("300000"), true, Some(act)).await;
 
     // Unapproved cycle (seeded pending) → guarded.
-    seed_approval(&pool, company, employee, 2026, 7, "pending").await;
-    let unapproved = svc.bill_timesheet_period(project, employee, 2026, 7, company, &billing, &sink).await;
+    seed_approval(&pool, employee, 2026, 7, "pending").await;
+    let unapproved = svc.bill_timesheet_period(project, employee, 2026, 7, &billing, &sink).await;
     assert!(matches!(unapproved, Err(ProjectError::Guarded(_))), "unapproved period refuses");
 
     // Approved but nothing billable (a non-billable row only) → invalid.
     let other = Uuid::new_v4();
     let employee2 = Uuid::new_v4();
-    let project2 = svc.create_project(a_project(company, Some(other))).await.unwrap();
-    seed_row(&pool, company, employee2, project2, None, 2026, 7, 6, dec("4"),
+    let project2 = svc.create_project(a_project(Some(other))).await.unwrap();
+    seed_row(&pool, employee2, project2, None, 2026, 7, 6, dec("4"),
         dec("500000"), dec("300000"), false, Some(act)).await;
-    seed_approval(&pool, company, employee2, 2026, 7, "approved").await;
-    let nothing = svc.bill_timesheet_period(project2, employee2, 2026, 7, company, &billing, &sink).await;
+    seed_approval(&pool, employee2, 2026, 7, "approved").await;
+    let nothing = svc.bill_timesheet_period(project2, employee2, 2026, 7, &billing, &sink).await;
     assert!(matches!(nothing, Err(ProjectError::Invalid(_))), "nothing billable refuses");
 
     // An internal project has no customer to bill.
     let internal = svc.create_project(NewProject {
-        company_id: company, project_name: "Internal".into(), project_type: "internal".into(),
+        project_name: "Internal".into(), project_type: "internal".into(),
         customer_id: None, source_so_id: None, currency: Some("IDR".into()),
     }).await.unwrap();
     let employee3 = Uuid::new_v4();
-    seed_row(&pool, company, employee3, internal, None, 2026, 7, 6, dec("4"),
+    seed_row(&pool, employee3, internal, None, 2026, 7, 6, dec("4"),
         dec("500000"), dec("300000"), true, Some(act)).await;
-    seed_approval(&pool, company, employee3, 2026, 7, "approved").await;
-    let noone = svc.bill_timesheet_period(internal, employee3, 2026, 7, company, &billing, &sink).await;
+    seed_approval(&pool, employee3, 2026, 7, "approved").await;
+    let noone = svc.bill_timesheet_period(internal, employee3, 2026, 7, &billing, &sink).await;
     assert!(matches!(noone, Err(ProjectError::Invalid(_))), "no customer refuses");
 
     assert_eq!(billing.invoice_count(), 0, "billing never driven");

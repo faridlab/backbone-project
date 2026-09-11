@@ -35,9 +35,6 @@ use crate::domain::entity::ProjectType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateProjectDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 200)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "project_name")]
@@ -79,9 +76,6 @@ pub struct CreateProjectDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateProjectDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 200)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "project_name")]
@@ -123,9 +117,6 @@ pub struct UpdateProjectDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchProjectDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 200)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "project_name")]
@@ -159,7 +150,7 @@ pub struct PatchProjectDto {
 impl PatchProjectDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.project_name.is_some() || self.project_type.is_some() || self.customer_id.is_some() || self.source_so_id.is_some() || self.currency.is_some() || self.status.is_some() || self.expected_start_date.is_some() || self.expected_end_date.is_some() || self.total_costing_amount.is_some() || self.total_billable_amount.is_some() || self.total_billed_amount.is_some() || self.notes.is_some()
+        self.project_name.is_some() || self.project_type.is_some() || self.customer_id.is_some() || self.source_so_id.is_some() || self.currency.is_some() || self.status.is_some() || self.expected_start_date.is_some() || self.expected_end_date.is_some() || self.total_costing_amount.is_some() || self.total_billable_amount.is_some() || self.total_billed_amount.is_some() || self.notes.is_some()
     }
 }
 
@@ -177,8 +168,6 @@ impl PatchProjectDto {
 pub struct ProjectResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub project_name: String,
     pub project_type: ProjectType,
@@ -250,9 +239,9 @@ impl ProjectListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct ProjectSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub project_name: String,
     pub project_type: ProjectType,
+    pub customer_id: Option<Uuid>,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -264,7 +253,6 @@ impl From<Project> for ProjectResponseDto {
     fn from(entity: Project) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             project_name: entity.project_name,
             project_type: entity.project_type,
             customer_id: entity.customer_id,
@@ -287,9 +275,9 @@ impl From<Project> for ProjectSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             project_name: entity.project_name,
             project_type: entity.project_type,
+            customer_id: entity.customer_id,
             created_at,
         }
     }
@@ -299,7 +287,6 @@ impl From<CreateProjectDto> for Project {
     fn from(dto: CreateProjectDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             project_name: dto.project_name,
             project_type: dto.project_type,
             customer_id: dto.customer_id,
@@ -321,7 +308,6 @@ impl From<&Project> for ProjectResponseDto {
     fn from(entity: &Project) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             project_name: entity.project_name.clone(),
             project_type: entity.project_type.clone(),
             customer_id: entity.customer_id.clone(),
@@ -347,7 +333,6 @@ impl backbone_core::FromCreateDto<CreateProjectDto> for Project {
 
 impl backbone_core::ApplyUpdateDto<UpdateProjectDto> for Project {
     fn apply_update(mut self, dto: UpdateProjectDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.project_name = dto.project_name;
         self.project_type = dto.project_type;
         self.customer_id = dto.customer_id;

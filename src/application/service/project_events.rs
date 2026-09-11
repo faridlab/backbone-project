@@ -16,6 +16,7 @@ use uuid::Uuid;
 pub struct TimesheetBilled {
     pub project_id: Uuid,
     pub employee_id: Uuid,
+    /// Legacy tenant twin (ADR-0029) for unstripped consumers — see the module docs.
     pub company_id: Uuid,
     pub year: i32,
     pub month: i32,
@@ -28,6 +29,7 @@ pub struct TimesheetBilled {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimesheetBillingReversed {
     pub project_id: Uuid,
+    /// Legacy tenant twin (ADR-0029) for unstripped consumers — see the module docs.
     pub company_id: Uuid,
     pub invoice_id: Uuid,
     pub credited_amount: Decimal,
@@ -38,6 +40,7 @@ pub struct TimesheetBillingReversed {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProjectCompleted {
     pub project_id: Uuid,
+    /// Legacy tenant twin (ADR-0029) for unstripped consumers — see the module docs.
     pub company_id: Uuid,
     pub total_billable_amount: Decimal,
     pub total_costing_amount: Decimal,

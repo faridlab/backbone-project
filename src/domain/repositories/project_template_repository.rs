@@ -7,7 +7,6 @@
 
 use async_trait::async_trait;
 use anyhow::Result;
-use uuid::Uuid;
 
 use crate::domain::entity::{ProjectTemplate, ProjectTemplateStatus, ProjectType};
 
@@ -44,7 +43,6 @@ pub struct ProjectTemplatePaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct ProjectTemplateFilter {
-    pub company_id: Option<Uuid>,
     pub template_name: Option<String>,
     pub project_type: Option<ProjectType>,
     pub status: Option<ProjectTemplateStatus>,
@@ -53,7 +51,7 @@ pub struct ProjectTemplateFilter {
 impl ProjectTemplateFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.template_name.is_some() || self.project_type.is_some() || self.status.is_some()
+        self.template_name.is_some() || self.project_type.is_some() || self.status.is_some()
     }
 }
 

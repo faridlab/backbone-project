@@ -35,21 +35,21 @@ rules:
 
   G-PRJ-3:
     when: [create]
-    condition: "at most one live project per (company_id, source_so_id)"
+    condition: "at most one live project per source_so_id"
     message: "One project per originating sales order — enforced by partial unique index uq_projects_source_so (WHERE source_so_id IS NOT NULL AND not soft-deleted)."
     code: project_source_so_duplicate
     severity: error
     enforcement: db
-    note: "The per-order idempotency backstop for service-delivery minting: a repeated confirm of the same order lands here and the minter re-selects the existing project."
+    note: "The per-order idempotency backstop for service-delivery minting: a repeated confirm of the same order lands here and the minter re-selects the existing project. Tenant-free since the tenancy strip (ADR-0029): the origin id is globally unique, so the bare-keyed unique serves every tenant; the module declares it only through this hook and the strip migration, and the schema tree derives no index for it."
 
   G-PRJ-4:
     when: [create]
-    condition: "at most one live task per (company_id, origin_sale_line_id)"
+    condition: "at most one live task per origin_sale_line_id"
     message: "One task per originating sales-order line — enforced by partial unique index uq_tasks_origin_sale_line (WHERE origin_sale_line_id IS NOT NULL AND not soft-deleted)."
     code: task_origin_sale_line_duplicate
     severity: error
     enforcement: db
-    note: "The per-line idempotency backstop for service-delivery minting; the minter's insert uses ON CONFLICT to re-select the prior task, so a repeated confirm mints exactly once per line."
+    note: "The per-line idempotency backstop for service-delivery minting; the minter's insert uses ON CONFLICT to re-select the prior task, so a repeated confirm mints exactly once per line. Tenant-free since the tenancy strip (ADR-0029): the origin id is globally unique, so the bare-keyed unique serves every tenant; the module declares it only through this hook and the strip migration, and the schema tree derives no index for it."
 
   G-PRJ-5:
     when: [update]
