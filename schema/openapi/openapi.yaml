@@ -7,7 +7,7 @@ info:
     This API provides 11 standard CRUD endpoints for each model.
 
 servers:
-  - url: http://localhost:3000
+  - url: /
     description: Development server
 
 tags:
@@ -23,7 +23,7 @@ tags:
     description: Task management endpoints
 
 paths:
-  /api/v1/activity_types:
+  /api/v1/project/activity_types:
     get:
       tags:
         - ActivityTypes
@@ -69,7 +69,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/activity_types/{id}:
+  /api/v1/project/activity_types/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -141,7 +141,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/activity_types/bulk:
+  /api/v1/project/activity_types/bulk:
     post:
       tags:
         - ActivityTypes
@@ -233,7 +233,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/activity_types/upsert:
+  /api/v1/project/activity_types/upsert:
     post:
       tags:
         - ActivityTypes
@@ -263,7 +263,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActivityType'
 
-  /api/v1/activity_types/trash:
+  /api/v1/project/activity_types/trash:
     get:
       tags:
         - ActivityTypes
@@ -280,7 +280,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActivityTypeList'
 
-  /api/v1/activity_types/{id}/restore:
+  /api/v1/project/activity_types/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -298,7 +298,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/activity_types/empty:
+  /api/v1/project/activity_types/empty:
     delete:
       tags:
         - ActivityTypes
@@ -315,7 +315,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/activity_types/delete/bulk:
+  /api/v1/project/activity_types/delete/bulk:
     post:
       tags:
         - ActivityTypes
@@ -335,7 +335,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/activity_types/restore/bulk:
+  /api/v1/project/activity_types/restore/bulk:
     post:
       tags:
         - ActivityTypes
@@ -353,7 +353,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/activity_types/restore/all:
+  /api/v1/project/activity_types/restore/all:
     post:
       tags:
         - ActivityTypes
@@ -369,7 +369,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/activity_types/trash/bulk:
+  /api/v1/project/activity_types/trash/bulk:
     delete:
       tags:
         - ActivityTypes
@@ -389,7 +389,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/projects:
+  /api/v1/project/projects:
     get:
       tags:
         - Projects
@@ -435,7 +435,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/projects/{id}:
+  /api/v1/project/projects/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -507,7 +507,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/projects/bulk:
+  /api/v1/project/projects/bulk:
     post:
       tags:
         - Projects
@@ -599,7 +599,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/projects/upsert:
+  /api/v1/project/projects/upsert:
     post:
       tags:
         - Projects
@@ -629,7 +629,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
 
-  /api/v1/projects/trash:
+  /api/v1/project/projects/trash:
     get:
       tags:
         - Projects
@@ -646,7 +646,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProjectList'
 
-  /api/v1/projects/{id}/restore:
+  /api/v1/project/projects/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -664,7 +664,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/projects/empty:
+  /api/v1/project/projects/empty:
     delete:
       tags:
         - Projects
@@ -681,7 +681,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/projects/delete/bulk:
+  /api/v1/project/projects/delete/bulk:
     post:
       tags:
         - Projects
@@ -701,7 +701,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/projects/restore/bulk:
+  /api/v1/project/projects/restore/bulk:
     post:
       tags:
         - Projects
@@ -719,7 +719,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/projects/restore/all:
+  /api/v1/project/projects/restore/all:
     post:
       tags:
         - Projects
@@ -735,7 +735,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/projects/trash/bulk:
+  /api/v1/project/projects/trash/bulk:
     delete:
       tags:
         - Projects
@@ -755,7 +755,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/project_templates:
+  /api/v1/project/project_templates:
     get:
       tags:
         - ProjectTemplates
@@ -801,7 +801,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/project_templates/{id}:
+  /api/v1/project/project_templates/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -873,7 +873,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/project_templates/bulk:
+  /api/v1/project/project_templates/bulk:
     post:
       tags:
         - ProjectTemplates
@@ -965,7 +965,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/project_templates/upsert:
+  /api/v1/project/project_templates/upsert:
     post:
       tags:
         - ProjectTemplates
@@ -995,7 +995,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProjectTemplate'
 
-  /api/v1/project_templates/trash:
+  /api/v1/project/project_templates/trash:
     get:
       tags:
         - ProjectTemplates
@@ -1012,7 +1012,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProjectTemplateList'
 
-  /api/v1/project_templates/{id}/restore:
+  /api/v1/project/project_templates/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1030,7 +1030,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/project_templates/empty:
+  /api/v1/project/project_templates/empty:
     delete:
       tags:
         - ProjectTemplates
@@ -1047,7 +1047,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/project_templates/delete/bulk:
+  /api/v1/project/project_templates/delete/bulk:
     post:
       tags:
         - ProjectTemplates
@@ -1067,7 +1067,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/project_templates/restore/bulk:
+  /api/v1/project/project_templates/restore/bulk:
     post:
       tags:
         - ProjectTemplates
@@ -1085,7 +1085,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/project_templates/restore/all:
+  /api/v1/project/project_templates/restore/all:
     post:
       tags:
         - ProjectTemplates
@@ -1101,7 +1101,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/project_templates/trash/bulk:
+  /api/v1/project/project_templates/trash/bulk:
     delete:
       tags:
         - ProjectTemplates
@@ -1121,7 +1121,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/project_template_tasks:
+  /api/v1/project/project_template_tasks:
     get:
       tags:
         - ProjectTemplateTasks
@@ -1167,7 +1167,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/project_template_tasks/{id}:
+  /api/v1/project/project_template_tasks/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1239,7 +1239,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/project_template_tasks/bulk:
+  /api/v1/project/project_template_tasks/bulk:
     post:
       tags:
         - ProjectTemplateTasks
@@ -1331,7 +1331,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/project_template_tasks/upsert:
+  /api/v1/project/project_template_tasks/upsert:
     post:
       tags:
         - ProjectTemplateTasks
@@ -1361,7 +1361,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProjectTemplateTask'
 
-  /api/v1/project_template_tasks/trash:
+  /api/v1/project/project_template_tasks/trash:
     get:
       tags:
         - ProjectTemplateTasks
@@ -1378,7 +1378,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProjectTemplateTaskList'
 
-  /api/v1/project_template_tasks/{id}/restore:
+  /api/v1/project/project_template_tasks/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1396,7 +1396,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/project_template_tasks/empty:
+  /api/v1/project/project_template_tasks/empty:
     delete:
       tags:
         - ProjectTemplateTasks
@@ -1413,7 +1413,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/project_template_tasks/delete/bulk:
+  /api/v1/project/project_template_tasks/delete/bulk:
     post:
       tags:
         - ProjectTemplateTasks
@@ -1433,7 +1433,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/project_template_tasks/restore/bulk:
+  /api/v1/project/project_template_tasks/restore/bulk:
     post:
       tags:
         - ProjectTemplateTasks
@@ -1451,7 +1451,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/project_template_tasks/restore/all:
+  /api/v1/project/project_template_tasks/restore/all:
     post:
       tags:
         - ProjectTemplateTasks
@@ -1467,7 +1467,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/project_template_tasks/trash/bulk:
+  /api/v1/project/project_template_tasks/trash/bulk:
     delete:
       tags:
         - ProjectTemplateTasks
@@ -1487,7 +1487,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/tasks:
+  /api/v1/project/tasks:
     get:
       tags:
         - Tasks
@@ -1533,7 +1533,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/tasks/{id}:
+  /api/v1/project/tasks/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1605,7 +1605,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/tasks/bulk:
+  /api/v1/project/tasks/bulk:
     post:
       tags:
         - Tasks
@@ -1697,7 +1697,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/tasks/upsert:
+  /api/v1/project/tasks/upsert:
     post:
       tags:
         - Tasks
@@ -1727,7 +1727,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Task'
 
-  /api/v1/tasks/trash:
+  /api/v1/project/tasks/trash:
     get:
       tags:
         - Tasks
@@ -1744,7 +1744,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TaskList'
 
-  /api/v1/tasks/{id}/restore:
+  /api/v1/project/tasks/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1762,7 +1762,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/tasks/empty:
+  /api/v1/project/tasks/empty:
     delete:
       tags:
         - Tasks
@@ -1779,7 +1779,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/tasks/delete/bulk:
+  /api/v1/project/tasks/delete/bulk:
     post:
       tags:
         - Tasks
@@ -1799,7 +1799,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/tasks/restore/bulk:
+  /api/v1/project/tasks/restore/bulk:
     post:
       tags:
         - Tasks
@@ -1817,7 +1817,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/tasks/restore/all:
+  /api/v1/project/tasks/restore/all:
     post:
       tags:
         - Tasks
@@ -1833,7 +1833,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/tasks/trash/bulk:
+  /api/v1/project/tasks/trash/bulk:
     delete:
       tags:
         - Tasks
