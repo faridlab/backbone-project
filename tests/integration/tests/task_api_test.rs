@@ -4,12 +4,11 @@
 //!
 //! Tests the Task CRUD API endpoints.
 
-use chrono::Utc;
+use crate::integration::framework::ApiTest;
 use serde_json::{json, Value};
 use uuid::Uuid;
 
 use super::crud_test_base::{CrudTestConfig, GenericCrudTest, TestDataGenerator};
-use crate::integration::framework::ApiTest;
 use crate::integration::helpers::CommonUtils;
 
 // ============================================================================
@@ -21,7 +20,6 @@ pub struct TaskTestData;
 
 impl TestDataGenerator for TaskTestData {
     fn generate_create_payload(&self, _utils: &CommonUtils) -> Value {
-        let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
             "project_id": Uuid::new_v4().to_string(),
@@ -37,7 +35,6 @@ impl TestDataGenerator for TaskTestData {
     }
 
     fn generate_update_payload(&self, id: &str, _utils: &CommonUtils) -> Value {
-        let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
             "project_id": Uuid::new_v4().to_string(),

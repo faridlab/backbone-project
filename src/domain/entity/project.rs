@@ -287,6 +287,8 @@ impl backbone_orm::EntityRepoMeta for Project {
         m.insert("source_so_id".to_string(), "uuid".to_string());
         m.insert("project_type".to_string(), "project_type".to_string());
         m.insert("status".to_string(), "project_status".to_string());
+        m.insert("expected_start_date".to_string(), "timestamptz".to_string());
+        m.insert("expected_end_date".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

@@ -13,7 +13,6 @@ pub mod project_template_task_api_test;
 pub mod task_api_test;
 
 // Re-exports for convenience
-pub use crud_test_base::*;
 pub use activity_type_api_test::*;
 pub use project_api_test::*;
 pub use project_template_api_test::*;
