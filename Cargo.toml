@@ -96,4 +96,4 @@ rand = "0.8"
 # TEST-ONLY edge: the timesheet-billing seam drives the REAL backbone-billing (create a service Sales
 # Invoice) through the BillingPort. Dev-dependency ONLY -- the shipped project library has ZERO normal
 # Cargo edge to billing.
-backbone-billing = { path = "../backbone-billing" }
+backbone-billing = { version = "0.8.25" }
