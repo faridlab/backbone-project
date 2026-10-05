@@ -75,6 +75,10 @@ models:
 
 enums:
   - name: TaskStatus
+    # Lives in the module's own schema: lifecycle and project each declare a
+    # task_status, so a bare name matches neither column (the generator
+    # schema-qualifies the type everywhere it is named).
+    schema: project
     description: "Task lifecycle state"
     variants:
       - name: open
