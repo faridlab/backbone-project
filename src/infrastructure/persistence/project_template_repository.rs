@@ -11,7 +11,7 @@ use anyhow::Result;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::org_scope;
 
 use crate::domain::entity::ProjectTemplate;
 
@@ -58,7 +58,7 @@ impl ProjectTemplateRepository {
         pool: &PgPool,
         template_id: Uuid,
     ) -> Result<Option<TemplateRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
                 r#"SELECT project_type::text AS project_type, status::text AS status FROM project.project_templates

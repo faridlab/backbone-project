@@ -101,8 +101,9 @@ impl ConvergedTimesheetRepository {
     /// slice — the exact set the billing exit invoices. Rates are plain-stored snapshots
     /// (never recomputed here); `billable_amount > 0` implies a non-NULL billing rate.
     ///
-    /// The multi-row read twin lives only in the legacy `company_scope` module (ADR-0029);
-    /// with no ambient legacy scope bound it runs as a plain pool read.
+    /// The multi-row read twin rides the `org_scope` module (ADR-0029): the
+    /// request-dedicated connection when the composer bound one, plain pool
+    /// otherwise, no scope invented.
     pub async fn list_billable_period_lines(
         &self,
         pool: &PgPool,
@@ -111,7 +112,7 @@ impl ConvergedTimesheetRepository {
         year: i32,
         month: i32,
     ) -> Result<Vec<ConvergedBillableLine>, sqlx::Error> {
-        let rows = company_scope::fetch_all_rows_scoped(
+        let rows = org_scope::fetch_all_rows_scoped(
             pool,
             sqlx::query(
                 r#"SELECT id, activity_type_id, remark, unit_amount, billing_rate, billable_amount

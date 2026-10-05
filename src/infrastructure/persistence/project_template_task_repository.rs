@@ -13,7 +13,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::org_scope;
 
 use crate::domain::entity::ProjectTemplateTask;
 
@@ -60,7 +60,7 @@ impl ProjectTemplateTaskRepository {
         pool: &PgPool,
         template_id: Uuid,
     ) -> Result<Vec<TemplateTaskRow>, sqlx::Error> {
-        let rows = company_scope::fetch_all_rows_scoped(
+        let rows = org_scope::fetch_all_rows_scoped(
             pool,
             sqlx::query(
                 r#"SELECT subject, task_type, expected_time FROM project.project_template_tasks

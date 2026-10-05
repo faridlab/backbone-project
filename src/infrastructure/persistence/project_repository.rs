@@ -218,8 +218,10 @@ impl ProjectRepository {
     /// Read the project's customer — who a period slice bills to. `Ok(None)` = an internal project
     /// with nobody to bill (the column is nullable).
     ///
-    /// The scalar/row read twins live only in the legacy `company_scope` module (ADR-0029); with no
+    /// The scalar read twins live only in the legacy `company_scope` module (ADR-0029); with no
     /// ambient legacy scope bound they run as a plain pool read, so the module stays tenant-agnostic.
+    /// (The row read twins now ride `org_scope`: request-dedicated connection when the composer
+    /// bound one, plain pool otherwise, no scope invented.)
     pub async fn find_customer_id(
         &self,
         pool: &PgPool,

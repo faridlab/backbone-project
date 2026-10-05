@@ -12,7 +12,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::org_scope;
 
 use crate::domain::entity::ActivityType;
 
@@ -60,7 +60,7 @@ impl ActivityTypeRepository {
         pool: &PgPool,
         activity_type_id: Uuid,
     ) -> Result<Option<ActivityRatesRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query("SELECT billing_rate, costing_rate FROM project.activity_types WHERE id=$1")
                 .bind(activity_type_id),
