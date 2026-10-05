@@ -1,6 +1,6 @@
 [package]
 name = "backbone-project"
-version = "0.5.23"
+version = "0.5.24"
 edition = "2021"
 description = "Projects: project and task masters with templates and activity types; logged effort rolls up from timesheet rows"
 license = "MIT OR Apache-2.0"
