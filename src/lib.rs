@@ -24,6 +24,8 @@ pub mod application;
 pub mod presentation;
 pub mod seeders;
 pub mod exports;
+// <<< CUSTOM MODULES
+// END CUSTOM
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -142,6 +144,8 @@ impl ProjectModule {
 /// Builder for ProjectModule
 pub struct ProjectModuleBuilder {
     db_pool: Option<PgPool>,
+    // <<< CUSTOM BUILDER FIELDS
+    // END CUSTOM
 }
 
 impl ProjectModuleBuilder {
@@ -149,6 +153,8 @@ impl ProjectModuleBuilder {
     pub fn new() -> Self {
         Self {
             db_pool: None,
+            // <<< CUSTOM BUILDER DEFAULTS
+            // END CUSTOM
         }
     }
 

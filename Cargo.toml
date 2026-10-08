@@ -1,6 +1,6 @@
 [package]
 name = "backbone-project"
-version = "0.5.24"
+version = "0.6.0"
 edition = "2021"
 description = "Projects: project and task masters with templates and activity types; logged effort rolls up from timesheet rows"
 license = "MIT OR Apache-2.0"
@@ -20,10 +20,10 @@ path = "src/lib.rs"
 # lockfile carry two copies of the same crate). Cargo dedupes the git fetch —
 # the repo is only cloned once even though four crates reference it.
 # -----------------------------------------------------------------------------
-backbone-core = { version = "2.7.35", features = ["postgres"] }
-backbone-orm = { version = "2.7.35" }
-backbone-auth = { version = "2.7.35" }
-backbone-messaging = { version = "2.7.35" }
+backbone-core = { version = "3.0.0", features = ["postgres"] }
+backbone-orm = { version = "3.0.0" }
+backbone-auth = { version = "3.0.0" }
+backbone-messaging = { version = "3.0.0" }
 
 # Core async runtime and serialization
 tokio = { version = "1.0", features = ["full"] }
@@ -96,4 +96,4 @@ rand = "0.8"
 # TEST-ONLY edge: the timesheet-billing seam drives the REAL backbone-billing (create a service Sales
 # Invoice) through the BillingPort. Dev-dependency ONLY -- the shipped project library has ZERO normal
 # Cargo edge to billing.
-backbone-billing = { version = "0.8.25" }
+backbone-billing = { version = "0.9.0" }
