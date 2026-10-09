@@ -20,6 +20,6 @@ pub type ProjectTriggerHandlerObj =
 
 /// Create a default registry pre-populated with all handlers for Project.
 pub fn project_trigger_registry() -> ProjectTriggerRegistry {
-    TriggerRegistry::build(|r| {
+    TriggerRegistry::build(|_r| {
     })
 }

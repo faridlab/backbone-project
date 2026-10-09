@@ -355,7 +355,7 @@ dependencies = [
 
 [[package]]
 name = "backbone-project"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "async-trait",
