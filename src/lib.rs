@@ -27,6 +27,16 @@ pub mod exports;
 // <<< CUSTOM MODULES
 // END CUSTOM
 
+// The module's extension (hand-written; ADR-0031).
+#[path = "lib.ext.rs"]
+mod lib_ext;
+pub use lib_ext::*;
+/// This crate's module and builder under fixed names, for the extension's `impl` blocks.
+#[allow(dead_code)]
+pub(crate) type ThisModule = ProjectModule;
+#[allow(dead_code)]
+pub(crate) type ThisModuleBuilder = ProjectModuleBuilder;
+
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
 
@@ -65,16 +75,39 @@ pub struct ProjectModule {
     pub(crate) project_template_service: Arc<ProjectTemplateService>,
     pub(crate) project_template_task_service: Arc<ProjectTemplateTaskService>,
     pub(crate) task_service: Arc<TaskService>,
+    /// The module's extension state (`lib.ext.rs`); its fields read through `Deref`.
+    pub(crate) ext: ModuleExt,
     // <<< CUSTOM FIELDS
-    /// Inbound read-port for sibling modules (`use project::exports::ProjectQueryService`).
-    /// `pub` (not `pub(crate)`) so siblings can obtain the trait object — clone the Arc
-    /// to hold `Arc<dyn ProjectQueryService>`. Lives in the CUSTOM FIELDS block (regen-safe).
-    pub query_service: std::sync::Arc<dyn crate::exports::ProjectQueryService>,
-    /// The validated write surface (project/task lifecycle, hybrid task status, the billing
-    /// exit, the confirm-mint, guarded deletes, the derived financial reads). Composing hosts
-    /// drive this; the generic-CRUD services above remain the trusted/admin escape hatch.
-    pub write_service: std::sync::Arc<crate::application::service::ProjectWriteService>,
     // END CUSTOM
+}
+
+impl std::ops::Deref for ProjectModule {
+    type Target = ModuleExt;
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
+}
+
+impl std::ops::DerefMut for ProjectModule {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
+}
+
+/// What the extension's `build` hook receives from the generated build (ADR-0031).
+#[allow(dead_code)]
+pub(crate) struct ModuleParts<'a> {
+    pub(crate) db_pool: &'a PgPool,
+    pub(crate) activity_type_service: &'a Arc<ActivityTypeService>,
+    pub(crate) activity_type_repository: &'a Arc<ActivityTypeRepository>,
+    pub(crate) project_service: &'a Arc<ProjectService>,
+    pub(crate) project_repository: &'a Arc<ProjectRepository>,
+    pub(crate) project_template_service: &'a Arc<ProjectTemplateService>,
+    pub(crate) project_template_repository: &'a Arc<ProjectTemplateRepository>,
+    pub(crate) project_template_task_service: &'a Arc<ProjectTemplateTaskService>,
+    pub(crate) project_template_task_repository: &'a Arc<ProjectTemplateTaskRepository>,
+    pub(crate) task_service: &'a Arc<TaskService>,
+    pub(crate) task_repository: &'a Arc<TaskRepository>,
 }
 
 impl ProjectModule {
@@ -144,8 +177,23 @@ impl ProjectModule {
 /// Builder for ProjectModule
 pub struct ProjectModuleBuilder {
     db_pool: Option<PgPool>,
+    /// The builder's extension state (`lib.ext.rs`); its fields read through `Deref`.
+    ext: ModuleBuilderExt,
     // <<< CUSTOM BUILDER FIELDS
     // END CUSTOM
+}
+
+impl std::ops::Deref for ProjectModuleBuilder {
+    type Target = ModuleBuilderExt;
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
+}
+
+impl std::ops::DerefMut for ProjectModuleBuilder {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
 }
 
 impl ProjectModuleBuilder {
@@ -153,6 +201,7 @@ impl ProjectModuleBuilder {
     pub fn new() -> Self {
         Self {
             db_pool: None,
+            ext: Default::default(),
             // <<< CUSTOM BUILDER DEFAULTS
             // END CUSTOM
         }
@@ -193,18 +242,22 @@ impl ProjectModuleBuilder {
         let task_service = Arc::new(TaskService::with_repository(task_repository.clone()));
 
         // <<< CUSTOM
-        let query_service: std::sync::Arc<dyn crate::exports::ProjectQueryService> =
-            std::sync::Arc::new(crate::exports::ProjectQueryServiceImpl::new(
-                activity_type_service.clone(),
-                project_service.clone(),
-                project_template_service.clone(),
-                project_template_task_service.clone(),
-                task_service.clone(),
-            ));
-        let write_service = std::sync::Arc::new(
-            crate::application::service::ProjectWriteService::new(db_pool.clone()),
-        );
         // END CUSTOM
+
+        // The extension builds its own state from what the generated build made.
+        let ext = self.ext.build(&ModuleParts {
+            db_pool: &db_pool,
+            activity_type_service: &activity_type_service,
+            activity_type_repository: &activity_type_repository,
+            project_service: &project_service,
+            project_repository: &project_repository,
+            project_template_service: &project_template_service,
+            project_template_repository: &project_template_repository,
+            project_template_task_service: &project_template_task_service,
+            project_template_task_repository: &project_template_task_repository,
+            task_service: &task_service,
+            task_repository: &task_repository,
+        })?;
 
         Ok(ProjectModule {
             activity_type_service,
@@ -212,9 +265,8 @@ impl ProjectModuleBuilder {
             project_template_service,
             project_template_task_service,
             task_service,
+            ext,
             // <<< CUSTOM
-            query_service,
-            write_service,
             // END CUSTOM
         })
     }

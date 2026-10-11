@@ -14,18 +14,6 @@ pub mod project_template_task_service;
 pub mod task_service;
 
 // <<< CUSTOM
-pub mod project_events;
-pub mod project_ports;
-pub mod project_write_service;
-// The write surface, chunked: each is an `impl ProjectWriteService` block over the vocabulary that
-// stays in `project_write_service` (so the `project_write_service::{NewProject, ...}` import paths
-// are unchanged).
-pub mod project_lifecycle;
-pub mod project_task;
-pub mod project_financials;
-pub mod project_billing;
-pub mod project_service_delivery;
-pub mod project_delete_guards;
 // END CUSTOM
 
 pub use activity_type_service::ActivityTypeService;
@@ -34,15 +22,7 @@ pub use project_template_service::ProjectTemplateService;
 pub use project_template_task_service::ProjectTemplateTaskService;
 pub use task_service::TaskService;
 // <<< CUSTOM
-pub use project_events::{
-    LoggingSink, ProjectCompleted, ProjectEvent, ProjectEventSink, TimesheetBilled,
-    TimesheetBillingReversed,
-};
-pub use project_ports::{
-    BillingPort, InvoiceAck, InvoiceFromTimesheetPeriod, InvoiceLineFromTimesheet, ProjectRejected,
-};
-pub use project_write_service::{
-    BillPeriodOutcome, NewProject, NewTask, ProjectError, ProjectFinancials, ProjectWriteService,
-    ServiceDeliveryLine, ServiceDeliveryLineOutcome, ServiceDeliveryRequest, ServiceTrackingRung,
-};
 // END CUSTOM
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");
