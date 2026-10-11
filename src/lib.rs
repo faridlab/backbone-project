@@ -24,8 +24,6 @@ pub mod application;
 pub mod presentation;
 pub mod seeders;
 pub mod exports;
-// <<< CUSTOM MODULES
-// END CUSTOM
 
 // The module's extension (hand-written; ADR-0031).
 #[path = "lib.ext.rs"]
@@ -77,8 +75,6 @@ pub struct ProjectModule {
     pub(crate) task_service: Arc<TaskService>,
     /// The module's extension state (`lib.ext.rs`); its fields read through `Deref`.
     pub(crate) ext: ModuleExt,
-    // <<< CUSTOM FIELDS
-    // END CUSTOM
 }
 
 impl std::ops::Deref for ProjectModule {
@@ -170,8 +166,6 @@ impl ProjectModule {
             .merge(create_task_read_routes(self.task_service.clone()))
     }
 
-    // <<< CUSTOM METHODS
-    // END CUSTOM
 }
 
 /// Builder for ProjectModule
@@ -179,8 +173,6 @@ pub struct ProjectModuleBuilder {
     db_pool: Option<PgPool>,
     /// The builder's extension state (`lib.ext.rs`); its fields read through `Deref`.
     ext: ModuleBuilderExt,
-    // <<< CUSTOM BUILDER FIELDS
-    // END CUSTOM
 }
 
 impl std::ops::Deref for ProjectModuleBuilder {
@@ -202,8 +194,6 @@ impl ProjectModuleBuilder {
         Self {
             db_pool: None,
             ext: Default::default(),
-            // <<< CUSTOM BUILDER DEFAULTS
-            // END CUSTOM
         }
     }
 
@@ -213,8 +203,6 @@ impl ProjectModuleBuilder {
         self
     }
 
-    // <<< CUSTOM - custom builder methods
-    // END CUSTOM
 
     /// Build the module with configured dependencies
     pub fn build(self) -> anyhow::Result<ProjectModule> {
@@ -241,8 +229,6 @@ impl ProjectModuleBuilder {
         let task_repository = Arc::new(TaskRepository::new(db_pool.clone()));
         let task_service = Arc::new(TaskService::with_repository(task_repository.clone()));
 
-        // <<< CUSTOM
-        // END CUSTOM
 
         // The extension builds its own state from what the generated build made.
         let ext = self.ext.build(&ModuleParts {
@@ -266,8 +252,6 @@ impl ProjectModuleBuilder {
             project_template_task_service,
             task_service,
             ext,
-            // <<< CUSTOM
-            // END CUSTOM
         })
     }
 }

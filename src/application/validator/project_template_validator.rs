@@ -16,9 +16,5 @@ pub type ProjectTemplateValidator = EntityValidator<ProjectTemplate>;
 pub fn project_template_validator() -> ProjectTemplateValidator {
     EntityValidator::new()
         .rule(RequiredString::new("template_name", |e: &ProjectTemplate| &e.template_name))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

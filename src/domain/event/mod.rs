@@ -24,5 +24,3 @@ pub use project_template_task_event_handlers::ProjectTemplateTaskEventHandler;
 pub use task_events::{TaskEvent, TaskEventPublisher, NoopTaskEventPublisher};
 pub use task_event_handlers::TaskEventHandler;
 
-// <<< CUSTOM
-// END CUSTOM

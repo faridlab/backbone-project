@@ -187,3 +187,4 @@ pub fn create_protected_project_template_task_routes<A: AuthMiddleware + Send + 
             }
         }))
 }
+

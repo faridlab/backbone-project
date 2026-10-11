@@ -16,9 +16,5 @@ pub type ActivityTypeValidator = EntityValidator<ActivityType>;
 pub fn activity_type_validator() -> ActivityTypeValidator {
     EntityValidator::new()
         .rule(RequiredString::new("name", |e: &ActivityType| &e.name))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

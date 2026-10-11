@@ -14,7 +14,6 @@ pub struct ProjectDomainPolicy;
 
 #[async_trait]
 impl DomainPolicy<Project> for ProjectDomainPolicy {
-    // <<< CUSTOM
     // Add entity-specific invariant checks here.
     // Example:
     // async fn can_delete(&self, entity: &Project) -> PolicyDecision {
@@ -22,5 +21,4 @@ impl DomainPolicy<Project> for ProjectDomainPolicy {
     //         Err("locked project cannot be deleted".into())
     //     } else { Ok(true) }
     // }
-    // END CUSTOM
 }

@@ -11,8 +11,6 @@ use crate::domain::entity::ProjectTemplateTask;
 /// enum containing a `Crud(CrudEvent<ProjectTemplateTask>)` variant.
 pub type ProjectTemplateTaskEvent = CrudEvent<ProjectTemplateTask>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

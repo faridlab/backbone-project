@@ -11,8 +11,6 @@ pub mod project_template_handler;
 pub mod project_template_task_handler;
 pub mod task_handler;
 
-// <<< CUSTOM
-// END CUSTOM
 
 // Re-exports
 pub use activity_type_handler::{create_activity_type_routes, create_activity_type_read_routes, create_activity_type_write_routes};
@@ -20,8 +18,6 @@ pub use project_handler::{create_project_routes, create_project_read_routes, cre
 pub use project_template_handler::{create_project_template_routes, create_project_template_read_routes, create_project_template_write_routes};
 pub use project_template_task_handler::{create_project_template_task_routes, create_project_template_task_read_routes, create_project_template_task_write_routes};
 pub use task_handler::{create_task_routes, create_task_read_routes, create_task_write_routes};
-// <<< CUSTOM
-// END CUSTOM
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

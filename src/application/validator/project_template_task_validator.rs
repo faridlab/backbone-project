@@ -17,9 +17,5 @@ pub fn project_template_task_validator() -> ProjectTemplateTaskValidator {
     EntityValidator::new()
         .rule(RequiredString::new("subject", |e: &ProjectTemplateTask| &e.subject))
         .rule(OptionalNotBlank::new("task_type", |e: &ProjectTemplateTask| e.task_type.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

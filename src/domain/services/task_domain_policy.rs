@@ -18,5 +18,3 @@ use crate::domain::entity::Task;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type TaskDomainPolicy = PermitAllPolicy<Task>;
 
-// <<< CUSTOM
-// END CUSTOM

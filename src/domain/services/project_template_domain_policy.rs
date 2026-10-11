@@ -18,5 +18,3 @@ use crate::domain::entity::ProjectTemplate;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type ProjectTemplateDomainPolicy = PermitAllPolicy<ProjectTemplate>;
 
-// <<< CUSTOM
-// END CUSTOM

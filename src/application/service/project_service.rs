@@ -32,5 +32,3 @@ pub type ProjectService = GenericCrudService<
     ProjectRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

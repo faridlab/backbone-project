@@ -17,5 +17,3 @@ pub use project_template_validator::{ProjectTemplateValidator, project_template_
 pub use project_template_task_validator::{ProjectTemplateTaskValidator, project_template_task_validator};
 pub use task_validator::{TaskValidator, task_validator};
 
-// <<< CUSTOM
-// END CUSTOM

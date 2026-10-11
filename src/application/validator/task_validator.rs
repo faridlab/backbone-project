@@ -17,9 +17,5 @@ pub fn task_validator() -> TaskValidator {
     EntityValidator::new()
         .rule(RequiredString::new("subject", |e: &Task| &e.subject))
         .rule(OptionalNotBlank::new("task_type", |e: &Task| e.task_type.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

@@ -13,16 +13,12 @@ pub mod project_template_service;
 pub mod project_template_task_service;
 pub mod task_service;
 
-// <<< CUSTOM
-// END CUSTOM
 
 pub use activity_type_service::ActivityTypeService;
 pub use project_service::ProjectService;
 pub use project_template_service::ProjectTemplateService;
 pub use project_template_task_service::ProjectTemplateTaskService;
 pub use task_service::TaskService;
-// <<< CUSTOM
-// END CUSTOM
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

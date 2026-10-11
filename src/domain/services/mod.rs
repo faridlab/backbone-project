@@ -14,5 +14,3 @@ pub use project_template_domain_policy::ProjectTemplateDomainPolicy;
 pub use project_template_task_domain_policy::ProjectTemplateTaskDomainPolicy;
 pub use task_domain_policy::TaskDomainPolicy;
 
-// <<< CUSTOM
-// END CUSTOM

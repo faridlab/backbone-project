@@ -32,5 +32,3 @@ pub type TaskService = GenericCrudService<
     TaskRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

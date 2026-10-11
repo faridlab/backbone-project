@@ -32,5 +32,3 @@ pub type ProjectTemplateTaskService = GenericCrudService<
     ProjectTemplateTaskRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

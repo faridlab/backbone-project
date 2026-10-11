@@ -32,5 +32,3 @@ pub type ActivityTypeService = GenericCrudService<
     ActivityTypeRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM
