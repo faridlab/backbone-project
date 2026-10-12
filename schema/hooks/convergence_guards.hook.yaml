@@ -17,45 +17,54 @@ model: Project
 rules:
   G-PRJ-1:
     when: [soft_delete]
+    entity: Project
     condition: "no live converged row (timesheet.timesheets with project_id = this project and metadata->>'deleted_at' IS NULL) references the project"
     message: "A project with logged time cannot be deleted — the analytic rows survive it and would dangle."
     code: project_has_timesheet_rows
     severity: error
     enforcement: service
-    justification: "The predicate reads the timesheet module's schema (timesheet.timesheets), so no DB arm is possible — a cross-module FK is impossible by design (modules compose via serialized ports). The guard lives in the module's validated delete verb; the generic CRUD soft-delete surface is documented as trusted-admin-only."
+    justification: "PARTLY: delete_project refuses a project with live converged rows, but no route calls it; the mounted generic project delete, permanent delete and empty-trash never consult it, its row probe runs outside the delete transaction, no foreign key backs it, and project_has_timesheet_rows is never produced. The predicate reads the timesheet module's schema, so the guard has to live in the delete path."
 
   G-PRJ-2:
     when: [soft_delete]
+    entity: Task
     condition: "no live converged row (timesheet.timesheets with task_id = this task and metadata->>'deleted_at' IS NULL) references the task"
     message: "A task with logged time cannot be deleted — the analytic rows survive it and would dangle."
     code: task_has_timesheet_rows
     severity: error
     enforcement: service
-    justification: "Same cross-schema shape as G-PRJ-1 — the predicate reads the timesheet module's schema and a DB FK cannot cross module schemas, so the service guard is the whole enforcement."
+    justification: "PARTLY: delete_task refuses a task with live converged rows, but no route calls it; the mounted generic task deletes never consult it, its row probe runs outside the delete transaction, and task_has_timesheet_rows is never produced. The predicate reads the timesheet module's schema, so the guard has to live in the delete path."
 
   G-PRJ-3:
     when: [create]
+    entity: Project
     condition: "at most one live project per source_so_id"
     message: "One project per originating sales order — enforced by partial unique index uq_projects_source_so (WHERE source_so_id IS NOT NULL AND not soft-deleted)."
     code: project_source_so_duplicate
     severity: error
     enforcement: db
     note: "The per-order idempotency backstop for service-delivery minting: a repeated confirm of the same order lands here and the minter re-selects the existing project. Tenant-free since the tenancy strip (ADR-0029): the origin id is globally unique, so the bare-keyed unique serves every tenant; the module declares it only through this hook and the strip migration, and the schema tree derives no index for it."
+    enforced_by: "migrations/20260911120000_strip_tenancy.up.sql::uq_projects_source_so"
+    justification: "The partial unique holds one live project per order on every path; a duplicate surfaces as a generic 400/409 or a database error, never project_source_so_duplicate, and a generic patch or soft delete can free the key for a second mint."
 
   G-PRJ-4:
     when: [create]
+    entity: Task
     condition: "at most one live task per origin_sale_line_id"
     message: "One task per originating sales-order line — enforced by partial unique index uq_tasks_origin_sale_line (WHERE origin_sale_line_id IS NOT NULL AND not soft-deleted)."
     code: task_origin_sale_line_duplicate
     severity: error
     enforcement: db
     note: "The per-line idempotency backstop for service-delivery minting; the minter's insert uses ON CONFLICT to re-select the prior task, so a repeated confirm mints exactly once per line. Tenant-free since the tenancy strip (ADR-0029): the origin id is globally unique, so the bare-keyed unique serves every tenant; the module declares it only through this hook and the strip migration, and the schema tree derives no index for it."
+    enforced_by: "migrations/20260911120000_strip_tenancy.up.sql::uq_tasks_origin_sale_line"
+    justification: "The partial unique holds one live task per order line on every path; a duplicate never answers task_origin_sale_line_duplicate, a generic patch or soft delete can free the key, and under a per-unit fence the minter's re-select can miss the conflicting row and report no task."
 
   G-PRJ-5:
     when: [update]
+    entity: Task
     condition: "task.status: a hand-set completed/cancelled LATCHES (the working-derivation never re-derives over it); setting open/working clears the latch; a non-latched task derives working iff live converged rows reference it, else open"
     message: "Hybrid status semantics (ADR-0016 pattern 3): closed values are sticky; new logged rows never silently reopen a done task."
     code: task_status_hybrid_latch
     severity: error
     enforcement: service
-    justification: "The latch is procedural state-machine behavior over a cross-schema derivation input (live converged rows in the timesheet module's schema) — not a SQL-expressible predicate on this module's own tables; the task write verb is the only writer of the latch."
+    justification: "PARTLY: set_task_status latches a hand-set completed or cancelled status, but the mounted generic task writes set status directly without the latch or the re-derivation, and serpa never calls set_task_status or refresh_task_status, so the working derivation never runs."
