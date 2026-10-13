@@ -220,6 +220,9 @@ impl backbone_orm::EntityRepoMeta for ProjectTemplateTask {
     fn search_fields() -> &'static [&'static str] {
         &["subject"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("template", "project_templates", "templateId")]
+    }
 }
 
 /// Builder for ProjectTemplateTask entity

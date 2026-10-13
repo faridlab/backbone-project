@@ -257,6 +257,9 @@ impl backbone_orm::EntityRepoMeta for Task {
     fn search_fields() -> &'static [&'static str] {
         &["subject"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("project", "projects", "projectId"), ("parentTask", "tasks", "parentTaskId")]
+    }
 }
 
 /// Builder for Task entity
