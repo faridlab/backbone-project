@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<ActivityType> for ActivityTypeRowRul
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `name_required` (@required on ActivityType.name)
         if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "name")), r::not(r::is_empty(r::trim(r::field(row, "name")))))) {
@@ -64,15 +64,15 @@ impl backbone_core::write_guard::WriteGuard<ActivityType> for ActivityTypeRowRul
         }
         // `name_max_length` (@max(140) on ActivityType.name)
         if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::le(r::length(r::field(row, "name")), r::Val::Num(140.0_f64))) {
-            shadow.push(Violation::new("name", "max_length", "name must be at most 140 characters").with_param("max", 140_i64));
+            refuse.push(Violation::new("name", "max_length", "name must be at most 140 characters").with_param("max", 140_i64));
         }
         // `billing_rate_non_negative` (@non_negative on ActivityType.billing_rate)
         if (create || (update && r::changed(old.as_ref(), row, &["billing_rate"]))) && !r::holds(&r::ge(r::field(row, "billing_rate"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("billing_rate", "non_negative", "billing_rate must not be negative"));
+            refuse.push(Violation::new("billing_rate", "non_negative", "billing_rate must not be negative"));
         }
         // `costing_rate_non_negative` (@non_negative on ActivityType.costing_rate)
         if (create || (update && r::changed(old.as_ref(), row, &["costing_rate"]))) && !r::holds(&r::ge(r::field(row, "costing_rate"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("costing_rate", "non_negative", "costing_rate must not be negative"));
+            refuse.push(Violation::new("costing_rate", "non_negative", "costing_rate must not be negative"));
         }
         GuardOutcome { refuse, shadow }
     }

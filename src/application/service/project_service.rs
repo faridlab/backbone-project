@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<Project> for ProjectRowRules {
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `project_name_required` (@required on Project.project_name)
         if (create || (update && r::changed(old.as_ref(), row, &["project_name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "project_name")), r::not(r::is_empty(r::trim(r::field(row, "project_name")))))) {
@@ -64,27 +64,27 @@ impl backbone_core::write_guard::WriteGuard<Project> for ProjectRowRules {
         }
         // `project_name_max_length` (@max(200) on Project.project_name)
         if (create || (update && r::changed(old.as_ref(), row, &["project_name"]))) && !r::holds(&r::le(r::length(r::field(row, "project_name")), r::Val::Num(200.0_f64))) {
-            shadow.push(Violation::new("project_name", "max_length", "project_name must be at most 200 characters").with_param("max", 200_i64));
+            refuse.push(Violation::new("project_name", "max_length", "project_name must be at most 200 characters").with_param("max", 200_i64));
         }
         // `currency_length` (@length(3) on Project.currency)
         if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::eq(r::length(r::field(row, "currency")), r::Val::Num(3.0_f64))) {
-            shadow.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
+            refuse.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
         }
         // `total_costing_amount_non_negative` (@non_negative on Project.total_costing_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["total_costing_amount"]))) && !r::holds(&r::ge(r::field(row, "total_costing_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("total_costing_amount", "non_negative", "total_costing_amount must not be negative"));
+            refuse.push(Violation::new("total_costing_amount", "non_negative", "total_costing_amount must not be negative"));
         }
         // `total_billable_amount_non_negative` (@non_negative on Project.total_billable_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["total_billable_amount"]))) && !r::holds(&r::ge(r::field(row, "total_billable_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("total_billable_amount", "non_negative", "total_billable_amount must not be negative"));
+            refuse.push(Violation::new("total_billable_amount", "non_negative", "total_billable_amount must not be negative"));
         }
         // `total_billed_amount_non_negative` (@non_negative on Project.total_billed_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["total_billed_amount"]))) && !r::holds(&r::ge(r::field(row, "total_billed_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("total_billed_amount", "non_negative", "total_billed_amount must not be negative"));
+            refuse.push(Violation::new("total_billed_amount", "non_negative", "total_billed_amount must not be negative"));
         }
         // `notes_max_length` (@max(2000) on Project.notes)
         if (create || (update && r::changed(old.as_ref(), row, &["notes"]))) && !r::holds(&r::le(r::length(r::field(row, "notes")), r::Val::Num(2000.0_f64))) {
-            shadow.push(Violation::new("notes", "max_length", "notes must be at most 2000 characters").with_param("max", 2000_i64));
+            refuse.push(Violation::new("notes", "max_length", "notes must be at most 2000 characters").with_param("max", 2000_i64));
         }
         GuardOutcome { refuse, shadow }
     }

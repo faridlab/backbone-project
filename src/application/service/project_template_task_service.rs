@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<ProjectTemplateTask> for ProjectTemp
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `template_id_required` (@required on ProjectTemplateTask.template_id)
         if (create || (update && r::changed(old.as_ref(), row, &["template_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "template_id")), r::not(r::is_empty(r::trim(r::field(row, "template_id")))))) {
@@ -68,15 +68,15 @@ impl backbone_core::write_guard::WriteGuard<ProjectTemplateTask> for ProjectTemp
         }
         // `subject_max_length` (@max(200) on ProjectTemplateTask.subject)
         if (create || (update && r::changed(old.as_ref(), row, &["subject"]))) && !r::holds(&r::le(r::length(r::field(row, "subject")), r::Val::Num(200.0_f64))) {
-            shadow.push(Violation::new("subject", "max_length", "subject must be at most 200 characters").with_param("max", 200_i64));
+            refuse.push(Violation::new("subject", "max_length", "subject must be at most 200 characters").with_param("max", 200_i64));
         }
         // `task_type_max_length` (@max(80) on ProjectTemplateTask.task_type)
         if (create || (update && r::changed(old.as_ref(), row, &["task_type"]))) && !r::holds(&r::le(r::length(r::field(row, "task_type")), r::Val::Num(80.0_f64))) {
-            shadow.push(Violation::new("task_type", "max_length", "task_type must be at most 80 characters").with_param("max", 80_i64));
+            refuse.push(Violation::new("task_type", "max_length", "task_type must be at most 80 characters").with_param("max", 80_i64));
         }
         // `expected_time_non_negative` (@non_negative on ProjectTemplateTask.expected_time)
         if (create || (update && r::changed(old.as_ref(), row, &["expected_time"]))) && !r::holds(&r::ge(r::field(row, "expected_time"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("expected_time", "non_negative", "expected_time must not be negative"));
+            refuse.push(Violation::new("expected_time", "non_negative", "expected_time must not be negative"));
         }
         GuardOutcome { refuse, shadow }
     }
