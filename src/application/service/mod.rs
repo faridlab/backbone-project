@@ -19,6 +19,11 @@ pub use project_service::ProjectService;
 pub use project_template_service::ProjectTemplateService;
 pub use project_template_task_service::ProjectTemplateTaskService;
 pub use task_service::TaskService;
+pub use activity_type_service::ActivityTypeRowRules;
+pub use project_service::ProjectRowRules;
+pub use project_template_service::ProjectTemplateRowRules;
+pub use project_template_task_service::ProjectTemplateTaskRowRules;
+pub use task_service::TaskRowRules;
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

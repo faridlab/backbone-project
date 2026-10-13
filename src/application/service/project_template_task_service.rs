@@ -32,3 +32,53 @@ pub type ProjectTemplateTaskService = GenericCrudService<
     ProjectTemplateTaskRepository,
 >;
 
+/// The rules the schema declares for ProjectTemplateTask, checked against the row a create or update
+/// would store. The generated build attaches it to [`ProjectTemplateTaskService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct ProjectTemplateTaskRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<ProjectTemplateTask> for ProjectTemplateTaskRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, ProjectTemplateTask>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `template_id_required` (@required on ProjectTemplateTask.template_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["template_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "template_id")), r::not(r::is_empty(r::trim(r::field(row, "template_id")))))) {
+            refuse.push(Violation::new("template_id", "required", "template_id is required"));
+        }
+        // `subject_required` (@required on ProjectTemplateTask.subject)
+        if (create || (update && r::changed(old.as_ref(), row, &["subject"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "subject")), r::not(r::is_empty(r::trim(r::field(row, "subject")))))) {
+            refuse.push(Violation::new("subject", "required", "subject is required"));
+        }
+        // `subject_max_length` (@max(200) on ProjectTemplateTask.subject)
+        if (create || (update && r::changed(old.as_ref(), row, &["subject"]))) && !r::holds(&r::le(r::length(r::field(row, "subject")), r::Val::Num(200.0_f64))) {
+            shadow.push(Violation::new("subject", "max_length", "subject must be at most 200 characters").with_param("max", 200_i64));
+        }
+        // `task_type_max_length` (@max(80) on ProjectTemplateTask.task_type)
+        if (create || (update && r::changed(old.as_ref(), row, &["task_type"]))) && !r::holds(&r::le(r::length(r::field(row, "task_type")), r::Val::Num(80.0_f64))) {
+            shadow.push(Violation::new("task_type", "max_length", "task_type must be at most 80 characters").with_param("max", 80_i64));
+        }
+        // `expected_time_non_negative` (@non_negative on ProjectTemplateTask.expected_time)
+        if (create || (update && r::changed(old.as_ref(), row, &["expected_time"]))) && !r::holds(&r::ge(r::field(row, "expected_time"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("expected_time", "non_negative", "expected_time must not be negative"));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+
