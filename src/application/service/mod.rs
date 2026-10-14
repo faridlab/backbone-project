@@ -25,5 +25,45 @@ pub use project_template_service::ProjectTemplateRowRules;
 pub use project_template_task_service::ProjectTemplateTaskRowRules;
 pub use task_service::TaskRowRules;
 
+/// A `ActivityTypeService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_activity_type_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::ActivityTypeRepository>,
+) -> ActivityTypeService {
+    ActivityTypeService::with_repository(repository).with_guard(std::sync::Arc::new(ActivityTypeRowRules))
+}
+
+/// A `ProjectService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_project_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::ProjectRepository>,
+) -> ProjectService {
+    ProjectService::with_repository(repository).with_guard(std::sync::Arc::new(ProjectRowRules))
+}
+
+/// A `ProjectTemplateService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_project_template_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::ProjectTemplateRepository>,
+) -> ProjectTemplateService {
+    ProjectTemplateService::with_repository(repository).with_guard(std::sync::Arc::new(ProjectTemplateRowRules))
+}
+
+/// A `ProjectTemplateTaskService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_project_template_task_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::ProjectTemplateTaskRepository>,
+) -> ProjectTemplateTaskService {
+    ProjectTemplateTaskService::with_repository(repository).with_guard(std::sync::Arc::new(ProjectTemplateTaskRowRules))
+}
+
+/// A `TaskService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_task_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::TaskRepository>,
+) -> TaskService {
+    TaskService::with_repository(repository).with_guard(std::sync::Arc::new(TaskRowRules))
+}
+
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

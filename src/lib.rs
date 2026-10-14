@@ -208,23 +208,23 @@ impl ProjectModuleBuilder {
 
         // ActivityType service
         let activity_type_repository = Arc::new(ActivityTypeRepository::new(db_pool.clone()));
-        let activity_type_service = Arc::new(ActivityTypeService::with_repository(activity_type_repository.clone()).with_guard(Arc::new(crate::application::service::ActivityTypeRowRules)));
+        let activity_type_service = Arc::new(crate::application::service::build_activity_type_service(activity_type_repository.clone()));
 
         // Project service
         let project_repository = Arc::new(ProjectRepository::new(db_pool.clone()));
-        let project_service = Arc::new(ProjectService::with_repository(project_repository.clone()).with_guard(Arc::new(crate::application::service::ProjectRowRules)));
+        let project_service = Arc::new(crate::application::service::build_project_service(project_repository.clone()));
 
         // ProjectTemplate service
         let project_template_repository = Arc::new(ProjectTemplateRepository::new(db_pool.clone()));
-        let project_template_service = Arc::new(ProjectTemplateService::with_repository(project_template_repository.clone()).with_guard(Arc::new(crate::application::service::ProjectTemplateRowRules)));
+        let project_template_service = Arc::new(crate::application::service::build_project_template_service(project_template_repository.clone()));
 
         // ProjectTemplateTask service
         let project_template_task_repository = Arc::new(ProjectTemplateTaskRepository::new(db_pool.clone()));
-        let project_template_task_service = Arc::new(ProjectTemplateTaskService::with_repository(project_template_task_repository.clone()).with_guard(Arc::new(crate::application::service::ProjectTemplateTaskRowRules)));
+        let project_template_task_service = Arc::new(crate::application::service::build_project_template_task_service(project_template_task_repository.clone()));
 
         // Task service
         let task_repository = Arc::new(TaskRepository::new(db_pool.clone()));
-        let task_service = Arc::new(TaskService::with_repository(task_repository.clone()).with_guard(Arc::new(crate::application::service::TaskRowRules)));
+        let task_service = Arc::new(crate::application::service::build_task_service(task_repository.clone()));
 
 
         // The extension builds its own state from what the generated build made.
