@@ -147,6 +147,42 @@ async fn pj3_delete_guards() {
     assert_eq!(gone, None, "soft-deleted project is no longer live");
 }
 
+/// PJ-3, every writer: the database refuses a soft or hard delete of a project or task that live
+/// timesheet rows cite, whoever writes it (the generic delete surface skips the verb).
+#[tokio::test]
+async fn pj3_deletes_outside_the_verb_are_refused_while_time_is_logged() {
+    let pool = pool().await;
+    let svc = ProjectWriteService::new(pool.clone());
+    let act = an_activity(&pool).await;
+    let project = svc.create_project(ext_project()).await.unwrap();
+    let task = svc.add_task(NewTask {
+        project_id: project, parent_task_id: None, subject: "Build".into(),
+        task_type: None, expected_time: Decimal::ZERO,
+    }).await.unwrap();
+    let row = seed_row(&pool, Uuid::new_v4(), project, Some(task), 2026, 7, 6, dec("2"),
+        dec("500000"), dec("300000"), true, Some(act)).await;
+
+    for (table, id, constraint) in [
+        ("tasks", task, "ck_tasks_g_prj_2__task_has_timesheet_rows"),
+        ("projects", project, "ck_projects_g_prj_1__project_has_timesheet_rows"),
+    ] {
+        for raw in [
+            format!("UPDATE project.{table} SET metadata = jsonb_set(metadata, '{{deleted_at}}', to_jsonb(NOW())) WHERE id=$1"),
+            format!("DELETE FROM project.{table} WHERE id=$1"),
+        ] {
+            let refused = sqlx::query(&raw).bind(id).execute(&pool).await.expect_err(&raw);
+            let e = refused.as_database_error().expect("a database refusal");
+            assert_eq!(e.constraint(), Some(constraint), "{raw}: {e:?}");
+        }
+    }
+
+    // Once the logged time is gone, the generic soft delete goes through.
+    sqlx::query("UPDATE timesheet.timesheets SET metadata = jsonb_set(metadata, '{deleted_at}', to_jsonb(NOW())) WHERE id=$1")
+        .bind(row).execute(&pool).await.unwrap();
+    sqlx::query("UPDATE project.tasks SET metadata = jsonb_set(metadata, '{deleted_at}', to_jsonb(NOW())) WHERE id=$1")
+        .bind(task).execute(&pool).await.expect("the task deletes");
+}
+
 /// PJ-4 — the confirm-mint: one call mints the rung shapes; a REPEATED call mints nothing new and
 /// observes the same stable ids. `task_in_project` forks from the template (its tasks
 /// materialize), `project_only` creates the project with no tasks, `manual` mints nothing, and

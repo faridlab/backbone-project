@@ -22,8 +22,9 @@ rules:
     message: "A project with logged time cannot be deleted — the analytic rows survive it and would dangle."
     code: project_has_timesheet_rows
     severity: error
-    enforcement: service
-    justification: "PARTLY: delete_project refuses a project with live converged rows, but no route calls it; the mounted generic project delete, permanent delete and empty-trash never consult it, its row probe runs outside the delete transaction, no foreign key backs it, and project_has_timesheet_rows is never produced. The predicate reads the timesheet module's schema, so the guard has to live in the delete path."
+    enforcement: both
+    enforced_by: "migrations/20261017170000_no_delete_with_logged_time.up.sql::projects_no_delete_with_logged_time, src/application/service/project_delete_guards.rs::delete_project"
+    justification: "The trigger projects_no_delete_with_logged_time refuses a soft or hard delete of a project live timesheet rows cite, for every writer: the generic delete, permanent delete and empty-trash included (tests/convergence_probes.rs pj3_deletes_outside_the_verb_are_refused_while_time_is_logged). It skips the check where the timesheet module is not installed. Cross-module: the rows live in the timesheet schema, which no foreign key from it reaches, so a row logged in a transaction still open while the project is deleted is not seen."
 
   G-PRJ-2:
     when: [soft_delete]
@@ -32,8 +33,9 @@ rules:
     message: "A task with logged time cannot be deleted — the analytic rows survive it and would dangle."
     code: task_has_timesheet_rows
     severity: error
-    enforcement: service
-    justification: "PARTLY: delete_task refuses a task with live converged rows, but no route calls it; the mounted generic task deletes never consult it, its row probe runs outside the delete transaction, and task_has_timesheet_rows is never produced. The predicate reads the timesheet module's schema, so the guard has to live in the delete path."
+    enforcement: both
+    enforced_by: "migrations/20261017170000_no_delete_with_logged_time.up.sql::tasks_no_delete_with_logged_time, src/application/service/project_delete_guards.rs::delete_task"
+    justification: "The trigger tasks_no_delete_with_logged_time refuses a soft or hard delete of a task live timesheet rows cite, for every writer (tests/convergence_probes.rs pj3_deletes_outside_the_verb_are_refused_while_time_is_logged). It skips the check where the timesheet module is not installed. Cross-module: a row logged in a transaction still open while the task is deleted is not seen."
 
   G-PRJ-3:
     when: [create]
