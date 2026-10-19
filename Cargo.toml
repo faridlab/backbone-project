@@ -1,6 +1,6 @@
 [package]
 name = "backbone-project"
-version = "0.12.1"
+version = "0.12.2"
 edition = "2021"
 description = "Projects: project and task masters with templates and activity types; logged effort rolls up from timesheet rows"
 license = "MIT OR Apache-2.0"
@@ -20,8 +20,8 @@ path = "src/lib.rs"
 # lockfile carry two copies of the same crate). Cargo dedupes the git fetch —
 # the repo is only cloned once even though four crates reference it.
 # -----------------------------------------------------------------------------
-backbone-core = { version = "3.7.0", features = ["postgres"] }
-backbone-orm = { version = "3.0.0" }
+backbone-core = { version = " 3.18.0", features = ["postgres"] }
+backbone-orm = { version = " 3.18.0" }
 backbone-auth = { version = "3.0.0" }
 backbone-messaging = { version = "3.0.0" }
 
