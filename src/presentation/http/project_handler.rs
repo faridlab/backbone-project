@@ -107,6 +107,13 @@ pub mod project_errors {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `project:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn project_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("project")
+        .in_module("project")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for Project.
 ///
 /// # Routes
@@ -136,21 +143,23 @@ pub mod project_errors {
 /// let router = create_project_routes(service);
 /// ```
 pub fn create_project_routes(service: Arc<ProjectService>) -> Router {
-    BackboneCrudHandler::<ProjectService, Project, CreateProjectDto, UpdateProjectDto, ProjectResponseDto>::routes(
+    BackboneCrudHandler::<ProjectService, Project, CreateProjectDto, UpdateProjectDto, ProjectResponseDto>::routes_guarded(
         service,
         "/projects",
+        project_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for Project.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_project_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_project_read_routes(service: Arc<ProjectService>) -> Router {
-    BackboneCrudHandler::<ProjectService, Project, CreateProjectDto, UpdateProjectDto, ProjectResponseDto>::read_routes(
+    BackboneCrudHandler::<ProjectService, Project, CreateProjectDto, UpdateProjectDto, ProjectResponseDto>::read_routes_guarded(
         service,
         "/projects",
+        project_permissions(),
     )
 }
 
@@ -166,9 +175,10 @@ pub fn create_project_read_routes(service: Arc<ProjectService>) -> Router {
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_project_write_routes(service: Arc<ProjectService>) -> Router {
-    BackboneCrudHandler::<ProjectService, Project, CreateProjectDto, UpdateProjectDto, ProjectResponseDto>::write_routes(
+    BackboneCrudHandler::<ProjectService, Project, CreateProjectDto, UpdateProjectDto, ProjectResponseDto>::write_routes_guarded(
         service,
         "/projects",
+        project_permissions(),
     )
 }
 

@@ -216,6 +216,13 @@ impl super::Entity for Task {
 }
 
 impl backbone_core::PersistentEntity for Task {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("project_id", "project.projects", "id"),
+            backbone_core::Reference::new("parent_task_id", "project.tasks", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

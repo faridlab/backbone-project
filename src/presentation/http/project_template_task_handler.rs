@@ -81,6 +81,13 @@ impl axum::response::IntoResponse for ProjectTemplateTaskError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `project_template_task:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn project_template_task_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("project_template_task")
+        .in_module("project")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for ProjectTemplateTask.
 ///
 /// # Routes
@@ -110,21 +117,23 @@ impl axum::response::IntoResponse for ProjectTemplateTaskError {
 /// let router = create_project_template_task_routes(service);
 /// ```
 pub fn create_project_template_task_routes(service: Arc<ProjectTemplateTaskService>) -> Router {
-    BackboneCrudHandler::<ProjectTemplateTaskService, ProjectTemplateTask, CreateProjectTemplateTaskDto, UpdateProjectTemplateTaskDto, ProjectTemplateTaskResponseDto>::routes(
+    BackboneCrudHandler::<ProjectTemplateTaskService, ProjectTemplateTask, CreateProjectTemplateTaskDto, UpdateProjectTemplateTaskDto, ProjectTemplateTaskResponseDto>::routes_guarded(
         service,
         "/project_template_tasks",
+        project_template_task_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for ProjectTemplateTask.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_project_template_task_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_project_template_task_read_routes(service: Arc<ProjectTemplateTaskService>) -> Router {
-    BackboneCrudHandler::<ProjectTemplateTaskService, ProjectTemplateTask, CreateProjectTemplateTaskDto, UpdateProjectTemplateTaskDto, ProjectTemplateTaskResponseDto>::read_routes(
+    BackboneCrudHandler::<ProjectTemplateTaskService, ProjectTemplateTask, CreateProjectTemplateTaskDto, UpdateProjectTemplateTaskDto, ProjectTemplateTaskResponseDto>::read_routes_guarded(
         service,
         "/project_template_tasks",
+        project_template_task_permissions(),
     )
 }
 
@@ -140,9 +149,10 @@ pub fn create_project_template_task_read_routes(service: Arc<ProjectTemplateTask
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_project_template_task_write_routes(service: Arc<ProjectTemplateTaskService>) -> Router {
-    BackboneCrudHandler::<ProjectTemplateTaskService, ProjectTemplateTask, CreateProjectTemplateTaskDto, UpdateProjectTemplateTaskDto, ProjectTemplateTaskResponseDto>::write_routes(
+    BackboneCrudHandler::<ProjectTemplateTaskService, ProjectTemplateTask, CreateProjectTemplateTaskDto, UpdateProjectTemplateTaskDto, ProjectTemplateTaskResponseDto>::write_routes_guarded(
         service,
         "/project_template_tasks",
+        project_template_task_permissions(),
     )
 }
 

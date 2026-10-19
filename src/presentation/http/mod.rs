@@ -13,11 +13,11 @@ pub mod task_handler;
 
 
 // Re-exports
-pub use activity_type_handler::{create_activity_type_routes, create_activity_type_read_routes, create_activity_type_write_routes};
-pub use project_handler::{create_project_routes, create_project_read_routes, create_project_write_routes};
-pub use project_template_handler::{create_project_template_routes, create_project_template_read_routes, create_project_template_write_routes};
-pub use project_template_task_handler::{create_project_template_task_routes, create_project_template_task_read_routes, create_project_template_task_write_routes};
-pub use task_handler::{create_task_routes, create_task_read_routes, create_task_write_routes};
+pub use activity_type_handler::{create_activity_type_routes, create_activity_type_read_routes, create_activity_type_write_routes, activity_type_permissions};
+pub use project_handler::{create_project_routes, create_project_read_routes, create_project_write_routes, project_permissions};
+pub use project_template_handler::{create_project_template_routes, create_project_template_read_routes, create_project_template_write_routes, project_template_permissions};
+pub use project_template_task_handler::{create_project_template_task_routes, create_project_template_task_read_routes, create_project_template_task_write_routes, project_template_task_permissions};
+pub use task_handler::{create_task_routes, create_task_read_routes, create_task_write_routes, task_permissions};
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

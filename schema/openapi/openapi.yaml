@@ -1897,10 +1897,6 @@ components:
       type: object
       required:
         - name
-        - billing_rate
-        - costing_rate
-        - status
-        - metadata
       properties:
         name:
           type: string
@@ -1911,8 +1907,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     UpdateActivityTypeRequest:
       type: object
@@ -1921,7 +1915,6 @@ components:
         - billing_rate
         - costing_rate
         - status
-        - metadata
       properties:
         name:
           type: string
@@ -1932,8 +1925,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     PatchActivityTypeRequest:
       type: object
@@ -1947,8 +1938,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     ActivityTypeList:
       type: object
@@ -2031,13 +2020,6 @@ components:
       type: object
       required:
         - project_name
-        - project_type
-        - currency
-        - status
-        - total_costing_amount
-        - total_billable_amount
-        - total_billed_amount
-        - metadata
       properties:
         project_name:
           type: string
@@ -2074,8 +2056,6 @@ components:
           nullable: true
           type: string
           maxLength: 2000
-        metadata:
-          type: object
 
     UpdateProjectRequest:
       type: object
@@ -2087,7 +2067,6 @@ components:
         - total_costing_amount
         - total_billable_amount
         - total_billed_amount
-        - metadata
       properties:
         project_name:
           type: string
@@ -2124,8 +2103,6 @@ components:
           nullable: true
           type: string
           maxLength: 2000
-        metadata:
-          type: object
 
     PatchProjectRequest:
       type: object
@@ -2165,8 +2142,6 @@ components:
           nullable: true
           type: string
           maxLength: 2000
-        metadata:
-          type: object
 
     ProjectList:
       type: object
@@ -2217,9 +2192,6 @@ components:
       type: object
       required:
         - template_name
-        - project_type
-        - status
-        - metadata
       properties:
         template_name:
           type: string
@@ -2228,8 +2200,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     UpdateProjectTemplateRequest:
       type: object
@@ -2237,7 +2207,6 @@ components:
         - template_name
         - project_type
         - status
-        - metadata
       properties:
         template_name:
           type: string
@@ -2246,8 +2215,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     PatchProjectTemplateRequest:
       type: object
@@ -2259,8 +2226,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     ProjectTemplateList:
       type: object
@@ -2321,9 +2286,6 @@ components:
       required:
         - template_id
         - subject
-        - expected_time
-        - sequence
-        - metadata
       properties:
         template_id:
           type: string
@@ -2340,8 +2302,6 @@ components:
         sequence:
           type: integer
           format: int32
-        metadata:
-          type: object
 
     UpdateProjectTemplateTaskRequest:
       type: object
@@ -2350,7 +2310,6 @@ components:
         - subject
         - expected_time
         - sequence
-        - metadata
       properties:
         template_id:
           type: string
@@ -2367,8 +2326,6 @@ components:
         sequence:
           type: integer
           format: int32
-        metadata:
-          type: object
 
     PatchProjectTemplateTaskRequest:
       type: object
@@ -2388,8 +2345,6 @@ components:
         sequence:
           type: integer
           format: int32
-        metadata:
-          type: object
 
     ProjectTemplateTaskList:
       type: object
@@ -2460,10 +2415,6 @@ components:
       required:
         - project_id
         - subject
-        - status
-        - expected_time
-        - progress
-        - metadata
       properties:
         project_id:
           type: string
@@ -2489,8 +2440,6 @@ components:
           type: string
         progress:
           type: string
-        metadata:
-          type: object
 
     UpdateTaskRequest:
       type: object
@@ -2500,7 +2449,6 @@ components:
         - status
         - expected_time
         - progress
-        - metadata
       properties:
         project_id:
           type: string
@@ -2526,8 +2474,6 @@ components:
           type: string
         progress:
           type: string
-        metadata:
-          type: object
 
     PatchTaskRequest:
       type: object
@@ -2556,8 +2502,6 @@ components:
           type: string
         progress:
           type: string
-        metadata:
-          type: object
 
     TaskList:
       type: object

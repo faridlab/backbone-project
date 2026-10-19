@@ -81,6 +81,13 @@ impl axum::response::IntoResponse for TaskError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `task:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn task_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("task")
+        .in_module("project")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for Task.
 ///
 /// # Routes
@@ -110,21 +117,23 @@ impl axum::response::IntoResponse for TaskError {
 /// let router = create_task_routes(service);
 /// ```
 pub fn create_task_routes(service: Arc<TaskService>) -> Router {
-    BackboneCrudHandler::<TaskService, Task, CreateTaskDto, UpdateTaskDto, TaskResponseDto>::routes(
+    BackboneCrudHandler::<TaskService, Task, CreateTaskDto, UpdateTaskDto, TaskResponseDto>::routes_guarded(
         service,
         "/tasks",
+        task_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for Task.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_task_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_task_read_routes(service: Arc<TaskService>) -> Router {
-    BackboneCrudHandler::<TaskService, Task, CreateTaskDto, UpdateTaskDto, TaskResponseDto>::read_routes(
+    BackboneCrudHandler::<TaskService, Task, CreateTaskDto, UpdateTaskDto, TaskResponseDto>::read_routes_guarded(
         service,
         "/tasks",
+        task_permissions(),
     )
 }
 
@@ -140,9 +149,10 @@ pub fn create_task_read_routes(service: Arc<TaskService>) -> Router {
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_task_write_routes(service: Arc<TaskService>) -> Router {
-    BackboneCrudHandler::<TaskService, Task, CreateTaskDto, UpdateTaskDto, TaskResponseDto>::write_routes(
+    BackboneCrudHandler::<TaskService, Task, CreateTaskDto, UpdateTaskDto, TaskResponseDto>::write_routes_guarded(
         service,
         "/tasks",
+        task_permissions(),
     )
 }
 

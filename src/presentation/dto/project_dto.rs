@@ -34,27 +34,41 @@ pub struct CreateProjectDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "project_name")]
     pub project_name: String,
-    #[serde(alias = "project_type")]
+    #[serde(default = "default_create_project_project_type", alias = "project_type")]
     pub project_type: ProjectType,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "customer_id")]
     pub customer_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_so_id")]
     pub source_so_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_project_currency")]
     pub currency: String,
+    #[serde(default = "default_create_project_status")]
     pub status: ProjectStatus,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "expected_start_date")]
     pub expected_start_date: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "expected_end_date")]
     pub expected_end_date: Option<DateTime<Utc>>,
-    #[serde(alias = "total_costing_amount")]
+    #[serde(default, alias = "total_costing_amount")]
     pub total_costing_amount: Decimal,
-    #[serde(alias = "total_billable_amount")]
+    #[serde(default, alias = "total_billable_amount")]
     pub total_billable_amount: Decimal,
-    #[serde(alias = "total_billed_amount")]
+    #[serde(default, alias = "total_billed_amount")]
     pub total_billed_amount: Decimal,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+}
+
+fn default_create_project_project_type() -> ProjectType {
+    ProjectType::External
+}
+
+fn default_create_project_currency() -> String {
+    "IDR".to_string()
+}
+
+fn default_create_project_status() -> ProjectStatus {
+    ProjectStatus::Open
 }
 
 // =============================================================================
@@ -112,27 +126,27 @@ pub struct PatchProjectDto {
     pub project_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "project_type")]
     pub project_type: Option<ProjectType>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "customer_id")]
-    pub customer_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_so_id")]
-    pub source_so_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "customer_id")]
+    pub customer_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_so_id")]
+    pub source_so_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<ProjectStatus>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "expected_start_date")]
-    pub expected_start_date: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "expected_end_date")]
-    pub expected_end_date: Option<DateTime<Utc>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "expected_start_date")]
+    pub expected_start_date: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "expected_end_date")]
+    pub expected_end_date: Option<Option<DateTime<Utc>>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_costing_amount")]
     pub total_costing_amount: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_billable_amount")]
     pub total_billable_amount: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_billed_amount")]
     pub total_billed_amount: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notes: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub notes: Option<Option<String>>,
 }
 
 impl PatchProjectDto {
@@ -336,12 +350,4 @@ impl backbone_core::ApplyUpdateDto<UpdateProjectDto> for Project {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Project here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

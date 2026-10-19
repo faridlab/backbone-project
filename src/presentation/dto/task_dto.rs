@@ -39,12 +39,18 @@ pub struct CreateTaskDto {
     pub subject: String,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "task_type")]
     pub task_type: Option<String>,
+    #[serde(default = "default_create_task_status")]
     pub status: TaskStatus,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "origin_sale_line_id")]
     pub origin_sale_line_id: Option<Uuid>,
-    #[serde(alias = "expected_time")]
+    #[serde(default, alias = "expected_time")]
     pub expected_time: Decimal,
+    #[serde(default)]
     pub progress: Decimal,
+}
+
+fn default_create_task_status() -> TaskStatus {
+    TaskStatus::Open
 }
 
 // =============================================================================
@@ -91,17 +97,17 @@ pub struct PatchTaskDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "project_id")]
     pub project_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "parent_task_id")]
-    pub parent_task_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "parent_task_id")]
+    pub parent_task_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subject: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "task_type")]
-    pub task_type: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "task_type")]
+    pub task_type: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<TaskStatus>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "origin_sale_line_id")]
-    pub origin_sale_line_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "origin_sale_line_id")]
+    pub origin_sale_line_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "expected_time")]
     pub expected_time: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -289,12 +295,4 @@ impl backbone_core::ApplyUpdateDto<UpdateTaskDto> for Task {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Task here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

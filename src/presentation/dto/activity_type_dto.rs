@@ -32,11 +32,16 @@ use crate::domain::entity::ActivityTypeStatus;
 pub struct CreateActivityTypeDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    #[serde(alias = "billing_rate")]
+    #[serde(default, alias = "billing_rate")]
     pub billing_rate: Decimal,
-    #[serde(alias = "costing_rate")]
+    #[serde(default, alias = "costing_rate")]
     pub costing_rate: Decimal,
+    #[serde(default = "default_create_activity_type_status")]
     pub status: ActivityTypeStatus,
+}
+
+fn default_create_activity_type_status() -> ActivityTypeStatus {
+    ActivityTypeStatus::Active
 }
 
 // =============================================================================
@@ -243,12 +248,4 @@ impl backbone_core::ApplyUpdateDto<UpdateActivityTypeDto> for ActivityType {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to ActivityType here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

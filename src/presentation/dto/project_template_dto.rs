@@ -33,9 +33,18 @@ pub struct CreateProjectTemplateDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "template_name")]
     pub template_name: String,
-    #[serde(alias = "project_type")]
+    #[serde(default = "default_create_project_template_project_type", alias = "project_type")]
     pub project_type: ProjectType,
+    #[serde(default = "default_create_project_template_status")]
     pub status: ProjectTemplateStatus,
+}
+
+fn default_create_project_template_project_type() -> ProjectType {
+    ProjectType::External
+}
+
+fn default_create_project_template_status() -> ProjectTemplateStatus {
+    ProjectTemplateStatus::Active
 }
 
 // =============================================================================
@@ -234,12 +243,4 @@ impl backbone_core::ApplyUpdateDto<UpdateProjectTemplateDto> for ProjectTemplate
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to ProjectTemplate here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

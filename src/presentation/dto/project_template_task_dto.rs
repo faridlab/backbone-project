@@ -36,9 +36,10 @@ pub struct CreateProjectTemplateTaskDto {
     pub subject: String,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "task_type")]
     pub task_type: Option<String>,
-    #[serde(alias = "expected_time")]
+    #[serde(default, alias = "expected_time")]
     pub expected_time: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
+    #[serde(default)]
     pub sequence: i32,
 }
 
@@ -85,8 +86,8 @@ pub struct PatchProjectTemplateTaskDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subject: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "task_type")]
-    pub task_type: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "task_type")]
+    pub task_type: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "expected_time")]
     pub expected_time: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
@@ -261,12 +262,4 @@ impl backbone_core::ApplyUpdateDto<UpdateProjectTemplateTaskDto> for ProjectTemp
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to ProjectTemplateTask here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 
